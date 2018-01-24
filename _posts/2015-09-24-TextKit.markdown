@@ -1,0 +1,17 @@
+---
+date: 2015-09-24 20:30:17+00:00
+layout: post
+title: '[转载]iOS 7系列译文：认识 TextKit'
+
+tags: 
+- 分享
+
+---
+
+
+
+
+不得不说，这是我见过的写的最好的一篇有关TextKit的译文了，代码也很清晰，文字简单明了，推荐大家看看。
+以下是链接，对富文本代码的编写会非常有帮助
+
+[iOS 7系列译文：认识 TextKit](http://www.cocoachina.com/industry/20131126/7417.html)

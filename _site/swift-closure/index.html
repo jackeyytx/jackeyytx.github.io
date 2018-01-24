@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<!--[if lt IE 7]><html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]--><!--[if (IE 7)&!(IEMobile)]><html class="no-js lt-ie9 lt-ie8"><![endif]--><!--[if (IE 8)&!(IEMobile)]><html class="no-js lt-ie9"><![endif]--><!--[if gt IE 8]><!--><html class="no-js">
+<!--<![endif]--> <head> <meta charset="UTF-8"> <meta content="text/html; charset=UTF-8" http-equiv="Content-Type"> <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1"> <title>Swift Closure -- 闭包从入门到进阶 – Toki_Han</title> <meta name="description" content="Learn + Share = Progress"> <meta name="keywords" content="Swift"> <!-- Twitter Cards --> <meta name="twitter:card" content="summary_large_image"> <meta name="twitter:image" content="http://LSnail.github.io/assets/pictures/13044471,1440,900.jpg"> <meta name="twitter:title" content="Swift Closure -- 闭包从入门到进阶"> <meta name="twitter:description" content="这里有swift闭包的用法和探寻"> <meta name="twitter:site" content="@username"> <meta name="twitter:creator" content="@username"> <!-- Open Graph --> <meta property="og:locale" content="en_US"> <meta property="og:type" content="article"> <meta property="og:title" content="Swift Closure -- 闭包从入门到进阶"> <meta property="og:description" content="这里有swift闭包的用法和探寻"> <meta property="og:url" content="https://LSnail.github.io/swift-closure/"> <meta property="og:site_name" content="Toki_Han"> <meta property="og:image" content="https://LSnail.github.io/assets/img/logo.png"> <link rel="canonical" href="https://LSnail.github.io/swift-closure/"> <link href="https://LSnail.github.io/feed.xml" type="application/atom+xml" rel="alternate" title="Toki_Han Feed"> <!-- Handheld --> <meta name="HandheldFriendly" content="True"> <meta name="MobileOptimized" content="320"> <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- CSS --> <link rel="stylesheet" href="https://LSnail.github.io/assets/css/main.css"> <!-- JS --> <script src="https://LSnail.github.io/assets/js/modernizr-3.3.1.custom.min.js"></script> <!-- Favicons --> <link rel="apple-touch-icon" href="https://LSnail.github.io/assets/img/favicons/iphone-5c-blue.png"> <link rel="apple-touch-icon" sizes="72x72" href="https://LSnail.github.io/assets/img/favicons/iphone-5c-blue.png"> <link rel="apple-touch-icon" sizes="114x114" href="https://LSnail.github.io/assets/img/favicons/iphone-5c-blue.png"> <link rel="apple-touch-icon" sizes="144x144" href="https://LSnail.github.io/assets/img/favicons/iphone-5c-blue.png"> <link rel="shortcut icon" type="image/png" href="https://LSnail.github.io/favicon.png"> <link rel="shortcut icon" href="https://LSnail.github.io/favicon.ico"> <!-- Background Image --> <style type="text/css">body {background-image:url(https://LSnail.github.io/assets/img/placeholder-big.jpg); }</style> <!-- Post Feature Image --> <style type="text/css">.feature {background-image:url(http://LSnail.github.io/assets/pictures/13044471,1440,900.jpg);}</style> </head> <body> <nav id="dl-menu" class="dl-menuwrapper" role="navigation"> <button class="dl-trigger">Open Menu</button> <ul class="dl-menu"> <li><a href="https://LSnail.github.io/">Home</a></li> <li> <a href="#">About</a> <ul class="dl-submenu"> <li> <img src="https://LSnail.github.io/assets/img/logo.png" alt="Toki_Han photo" class="author-photo"> <h4>Toki_Han</h4> <p>Learn + Share = Progress</p> </li> <li><a href="https://LSnail.github.io/about/"><span class="btn btn-inverse">Learn More</span></a></li> <li> <a href="http://twitter.com/username" target="_blank" rel="noopener noreferrer"><i class="fa fa-fw fa-twitter-square"></i> Twitter</a> </li> <li> <a href="http://facebook.com/username" target="_blank" rel="noopener noreferrer"><i class="fa fa-fw fa-facebook-square"></i> Facebook</a> </li> <li> <a href="http://instagram.com/username" target="_blank" rel="noopener noreferrer"><i class="fa fa-fw fa-instagram"></i> Instagram</a> </li> <li> <a href="http://github.com/LSnail" target="_blank" rel="noopener noreferrer"><i class="fa fa-fw fa-github"></i> Github</a> </li> <li> <a href="http://steamcommunity.com/id/username" target="_blank" rel="noopener noreferrer"><i class="fa fa-fw fa-steam-square"></i> Steam</a> </li> </ul>
+<!-- /.dl-submenu --> </li> <li> <a href="#">Posts</a> <ul class="dl-submenu"> <li><a href="https://LSnail.github.io/posts/">All Posts</a></li> <li><a href="https://LSnail.github.io/tags/">All Tags</a></li> </ul> </li> <li><a href="https://LSnail.github.io/projects/">Projects</a></li> </ul>
+<!-- /.dl-menu --> </nav><!-- /.dl-menuwrapper --> <!-- Header --> <header class="header" role="banner"> <div class="wrapper animated fadeIn"> <div class="content"> <div class="post-title feature "> <h1>Swift Closure -- 闭包从入门到进阶</h1> <h4>11 Jun 2016</h4> <a class="btn zoombtn" href="https://LSnail.github.io/posts/"> <i class="fa fa-chevron-left"></i> </a> </div> <h2 id="section">写在前面</h2> <p>在我们开始话题之前，先来说说我们可以继续愉快的聊下去的几个前提：</p> <ul> <li>你知道swift是一门牛逼的语言(说PHP是最好的语言的童鞋们，你们先放下手里的板砖，有话好好说!)</li> <li>你了解swift的基本语法，包括什么是变量和func，以及怎么写一个func并调用它(“闭嘴，这用你来哔哔哔？”)</li> <li>你现在身怀两门绝技，一种专门对付像我一样的菜鸟，抬手就让我等跪地唱征服，它叫做<a href="https://www.baidu.com" class="btn">百度一下你就知道了</a>；另一种是用来高手过招，一出手风云变幻翻江倒海，下证命理上破虚空，名为<a href="https://www.google.com" class="btn">谷歌一下你就什么都不知道了</a>
+</li> <li>最重要的一点，你现在一点都不想揍我(你保证么？)，那么，让我们开始听我来详(xia)细(bi)讲(bi)一下，<strong>我所理解的swift闭包</strong>(文章为@Toki_Han原创，引用内容在中间和最后均有注明)</li> </ul> <h1 id="section-1">什么是闭包</h1> <blockquote> <p><strong>闭包（Closures）是独立的函数代码块，能在代码中传递及使用。Swift中的闭包与C和Objective-C中的代码块及其它编程语言中的匿名函数相似。</strong></p> </blockquote> <blockquote> <p><strong>闭包可以在上下文的范围内捕获、存储任何被定义的常量和变量引用。因这些常量和变量的封闭性，而命名为“闭包（Closures）”。Swift能够对所有你所能捕获到的引用进行内存管理。</strong></p> </blockquote> <p><strong>PS:</strong> 说的这么高大上，所以最后闭包到底是个什么鬼？好吧，其实它就是类似OC里面的<code class="highlighter-rouge">block</code>(请注意，是类似！并不是同一种东西)，或者类似JavaScript里面的<code class="highlighter-rouge">匿名自执行函数</code>(JS:”你哪来的，别和我扯进乎哈”)。</p> <p><strong>再PS:</strong> 那<code class="highlighter-rouge">捕获（capturing）</code>又是什么鬼？这个东西说出来你可能不信，它其实就是<code class="highlighter-rouge">引用/得到</code>(get/set)的高大上说法，用于捕捉某个范围内的常量和变量的值。这个有什么意义呢，我们后面会慢慢说。</p> <p><strong>再再PS:</strong></p> <div class="highlighter-rouge"><pre class="highlight"><code>* 全局函数都是闭包，特点是有函数名但没有捕获任何值。
+* 嵌套函数都是闭包，特点是有函数名，并且可以在它封闭的函数中捕获值。
+* 闭包表达式都是闭包，特点是没有函数名，可以使用轻量的语法在它所围绕的上下文中捕获值。
+* 变量和常量也可以用闭包来表示。
+</code></pre></div> <h1 id="section-2">闭包能干嘛</h1> <p>我和你说，闭包老厉害了~大神们写的出神入化的代码，里面肯定少不了各种闭包，先看看人家怎么形容的(来自letsswift.com)：</p> <blockquote> <p><strong>Swift的闭包表达式有着干净，清晰的风格，并常见情况下对于鼓励简短、整洁的语法做出优化。这些优化包括： 推理参数及返回值类型源自上下文 隐式返回源于单一表达式闭包 简约参数名 尾随闭包语法</strong></p> </blockquote> <p>好吧，我墨水少，我不会形容，但是我看明白了，闭包俩作用：</p> <p><strong><code class="highlighter-rouge">好看!</code></strong> <strong><code class="highlighter-rouge">厉害!</code></strong></p> <p>你想想哈，我用二十行的代码写的一个func，你用三行写出来了，还更简洁明了，调用的时候就像雪碧一样心飞扬，这是一件多有范儿的事情！废话到此为止，let’s get it!</p> <h1 id="section-3">闭包怎么用（纯干货）</h1> <p class="notice">严重申明：我已经看了太多的 <code class="highlighter-rouge">intArray.sortInPlace({$0 &gt;= $1})</code> 这种代码的帖子了，只想说一句，大神们你们写的很详细了，我也看懂了，但是为啥非要用 <code class="highlighter-rouge">public mutating func sortInPlace()</code> 这个方法上手很麻烦呐，内心一直有一种不安全感提醒我，真的完全明白了吗？所以，我打算从最基础的 1 + 2 写起，先入门再说。</p> <p>是不是已经感觉迫(废)不(话)及(好)待(多)了呢？来写一个闭包来展示下老夫的手段？那先来看看闭包的定义形式：</p> <h4 id="section-4">闭包最全的定义形式是:</h4> <div class="highlighter-rouge"><pre class="highlight"><code><span class="p">{</span>
+    <span class="p">(</span><span class="err">参数</span><span class="p">:</span><span class="err">参数类型</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="err">返回值类型</span>  <span class="k">in</span>
+    <span class="n">code</span><span class="p">(</span><span class="k">return</span> <span class="n">xxxxx</span><span class="p">)</span>
+<span class="p">}(</span><span class="err">需要传的参数</span><span class="p">)</span>
+</code></pre></div> <p>PS：我的理解是，这里的闭包和JavaScript里的匿名自执行函数非常的相似，我们关注的地方在于可以在内部实现什么，而不是在外面如何使用它。</p> <h4 id="swift">感谢swift提供的类型推导，它可以根据后面括号里传的参数，自动判断参数的类型，所以我们可以把闭包内部的参数的类型省略掉：</h4> <div class="highlighter-rouge"><pre class="highlight"><code><span class="p">{</span>
+    <span class="p">(</span><span class="err">参数</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="err">返回值类型</span>  <span class="k">in</span>
+    <span class="n">code</span><span class="p">(</span><span class="k">return</span> <span class="n">xxxxx</span><span class="p">)</span>
+<span class="p">}(</span><span class="err">需要传的参数</span><span class="p">)</span>
+</code></pre></div> <h4 id="section-5">或者把闭包中的返回值类型省略掉，但是有一点注意，当你把参数和返回值类型同时省略的时候，一定要在外部声明这个闭包返回值类型(要不你什么都不说清楚，代码怎么知道你想要个啥啊)</h4> <div class="highlighter-rouge"><pre class="highlight"><code><span class="p">{</span>
+    <span class="p">(</span><span class="err">参数</span><span class="p">)</span> <span class="k">in</span>
+    <span class="n">code</span><span class="p">(</span><span class="k">return</span> <span class="n">xxxxx</span><span class="p">)</span>
+<span class="p">}(</span><span class="err">需要传的参数</span><span class="p">)</span>
+</code></pre></div> <h4 id="return">最后，其实参数也是可以省略的，用<strong><code class="highlighter-rouge">$</code></strong>来调用函数内部给参数默认分配的名字。如果闭包中只有简单的一行代码，关键字<strong><code class="highlighter-rouge">return</code></strong>也是可以省略的，这部分请见下面的例子。</h4> <h4 id="playground">正式上代码(以下代码在playground中完成并测试)</h4> <p>这里我就用一个简单的加法运算来说明下，有一点要牢记：<strong>swift中，函数是一等公民！</strong>(有关这个问题请自行施放百度/Google绝技):</p> <div class="highlighter-rouge"><pre class="highlight"><code><span class="sr">//</span> <span class="s2">"不使用闭包来实现两数字相加"</span>
+<span class="n">func</span> <span class="n">getSum</span><span class="p">(</span><span class="n">a</span> <span class="ss">a: </span><span class="no">Int</span><span class="p">,</span> <span class="ss">b: </span><span class="no">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="no">Int</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span>
+<span class="p">}</span>
+
+<span class="n">var</span> <span class="n">sum</span> <span class="o">=</span> <span class="n">getSum</span><span class="p">(</span><span class="ss">a: </span><span class="mi">3</span><span class="p">,</span> <span class="ss">b: </span><span class="mi">5</span><span class="p">)</span>
+<span class="sr">//</span> <span class="s2">"sum = 8"</span>
+</code></pre></div> <div class="highlighter-rouge"><pre class="highlight"><code><span class="sr">//</span> <span class="s2">"现在我们用闭包来实现相同功能"</span>
+<span class="sr">//</span> <span class="s2">"这里的sumClosure实质上是一个(Int, Int) -&gt; Int的func"</span>
+<span class="n">let</span> <span class="n">sumClosure</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="p">(</span><span class="ss">a: </span><span class="no">Int</span><span class="p">,</span> <span class="ss">b: </span><span class="no">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="no">Int</span> <span class="k">in</span>
+    <span class="k">return</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span>
+<span class="p">}</span>
+<span class="n">var</span> <span class="ss">sum: </span><span class="no">Int</span> <span class="o">=</span> <span class="n">sumClosure</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+<span class="sr">//</span> <span class="s2">"sum = 8"</span>
+
+
+<span class="sr">//</span> <span class="s2">"或者我们干脆这么写(这里就已经是用闭包对变量/属性进行操作了)"</span>
+<span class="n">var</span> <span class="ss">sum: </span><span class="no">Int</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="p">(</span><span class="ss">a: </span><span class="no">Int</span><span class="p">,</span> <span class="ss">b: </span><span class="no">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="no">Int</span> <span class="k">in</span>
+    <span class="k">return</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span>
+<span class="p">}(</span><span class="mi">3</span><span class="p">,</span><span class="mi">5</span><span class="p">)</span>
+</code></pre></div> <p>现在让我们开始对这个可怜的sum进行各种砍掉砍掉：</p> <div class="highlighter-rouge"><pre class="highlight"><code><span class="sr">//</span> <span class="mi">1</span><span class="o">.</span><span class="s2">"省略参数类型"</span>
+<span class="n">var</span> <span class="n">sum</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="o">-&gt;</span> <span class="no">Int</span> <span class="k">in</span>
+    <span class="k">return</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span>
+<span class="p">}(</span><span class="mi">3</span><span class="p">,</span><span class="mi">5</span><span class="p">)</span>
+
+<span class="sr">//</span> <span class="mi">2</span><span class="o">.</span><span class="s2">"然后省略返回值类型(要注意在外部还要声明类型的哦~)"</span>
+<span class="n">var</span> <span class="ss">sum: </span><span class="no">Int</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="n">a</span><span class="p">,</span> <span class="n">b</span> <span class="k">in</span>
+    <span class="k">return</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span>
+<span class="p">}(</span><span class="mi">3</span><span class="p">,</span><span class="mi">5</span><span class="p">)</span>
+
+<span class="sr">//</span> <span class="mi">3</span><span class="o">.</span><span class="s2">"效果不行，这么长怎么玩，我们把中间那行丑爆了的删掉"</span>
+<span class="n">var</span> <span class="ss">sum: </span><span class="no">Int</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="vg">$0</span> <span class="o">+</span> <span class="vg">$1</span> <span class="o">/</span><span class="sr">/ "关于$是什么意思请自行查找"
+}(3,5)
+
+/</span><span class="o">/</span> <span class="mi">4</span><span class="o">.</span><span class="s2">"还可以砍么？答案是当然的！把碍眼的return砍掉！"</span>
+<span class="n">var</span> <span class="ss">sum: </span><span class="no">Int</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="vg">$0</span> <span class="o">+</span> <span class="vg">$1</span>
+<span class="p">}(</span><span class="mi">3</span><span class="p">,</span><span class="mi">5</span><span class="p">)</span>
+
+<span class="sr">//</span> <span class="mi">5</span><span class="o">.</span><span class="s2">"激动人心的时刻到了，把它写在一行里面！"</span>
+<span class="n">var</span> <span class="ss">sum: </span><span class="no">Int</span> <span class="o">=</span> <span class="p">{</span><span class="vg">$0</span> <span class="o">+</span> <span class="vg">$1</span><span class="p">}(</span><span class="mi">3</span><span class="p">,</span><span class="mi">5</span><span class="p">)</span>
+</code></pre></div> <p>如何，最终的效果是不是很高大上？别急，这里有几个<strong><code class="highlighter-rouge">重要问题</code></strong>需要说明：</p> <ol> <li> <p>这里声明了 <code class="highlighter-rouge">var sum: Int</code> ，主要是为了方便理解，平常用的时候是不会多这么一步的，把闭包当参数/返回值的时候再冒出来一个var，啧啧，水(逼)平(格)一下子就low了很多，所以可以这么写: someFunc(aString,{$0 + $1}(3,5))</p> </li> <li> <p>这点很重要，那就是为啥别人的闭包后面都没有(3,5)这种影响市容的玩意儿？那是因为啊，我没写一个合适的方法来使用这个闭包。(3,5)的作用，就相当于我立马在声明了这个闭包以后，就马上调用了这个闭包并给它传入参数。现在还是为了方便理解阶段呢，别急嘛~下面来个完整点的</p> </li> </ol> <div class="highlighter-rouge"><pre class="highlight"><code><span class="n">func</span> <span class="n">printSum</span><span class="p">(</span><span class="n">string1</span> <span class="ss">str1: </span><span class="no">String</span><span class="p">,</span> <span class="n">string2</span> <span class="ss">str2: </span><span class="no">String</span><span class="p">,</span> <span class="ss">result: </span><span class="p">(</span><span class="no">Int</span><span class="p">,</span> <span class="no">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="no">Int</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">let</span> <span class="n">count</span> <span class="o">=</span> <span class="n">result</span><span class="p">(</span><span class="n">str1</span><span class="p">.</span><span class="nf">characters</span><span class="p">.</span><span class="nf">count</span><span class="p">,</span> <span class="n">str2</span><span class="p">.</span><span class="nf">characters</span><span class="p">.</span><span class="nf">count</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"</span><span class="se">\(</span><span class="s2">str1) and </span><span class="se">\(</span><span class="s2">str2)--&gt; total length is: </span><span class="se">\(</span><span class="s2">count)"</span><span class="p">)</span>
+<span class="p">}</span>
+
+<span class="n">printSum</span><span class="p">(</span><span class="ss">string1: </span><span class="s2">"hello"</span><span class="p">,</span> <span class="ss">string2: </span><span class="s2">"world"</span><span class="p">,</span> <span class="ss">result: </span><span class="p">{</span><span class="vg">$0</span> <span class="o">+</span> <span class="vg">$1</span><span class="p">})</span>
+<span class="sr">//</span> <span class="s2">"打印出的结果为  hello and world--&gt; total length is: 10"</span>
+</code></pre></div> <p class="notice">这里需要说明的是： 当你需要将一个闭包当做参数使用的时候，如果要给闭包本身传参，那就需要有一个合适的、对应的函数参数来接收闭包作为参数。在上面的例子中，printSum这个函数的作用就是打印两个字符串的总长度，这里第三个参数result就被声明为了：接收两个Int参数的闭包函数，并且返回两个参数的和。这也就是有了好车子就得买贵点的保险的道理。</p> <p>说到这里，相信童鞋们应该对闭包这货有点大致的理解了吧。其实上面所有的东西加起来，只是说明白(但愿吧)了闭包是什么和怎么写的问题。语法上来说并不难理解，而且闭包的使用也是非常灵活的。用好了，代码美观不说，最大的好处是当别人看的时候…啧啧，你们可以脑补一下 ^o^。多加练习总能写出自己的风(bi)格(ge)来~</p> <p>Wait~！你以为这就完了？呵呵，太天真了。。。说了是纯干货的，会有这么简单么？来，倒杯咖啡，听我接着给你吹…啊不，接着说一下闭包的进阶形态。</p> <h2 id="section-6">属性的闭包</h2> <p>应该知道的是，类的属性可以用闭包来表示，可以在闭包中定义set,get,willSet,willGet等方法。就算是你当时并不清楚这个是闭包，但是肯定见过这样的写法。而且不仅仅是类的属性，变量也是可以这么做的，写法上面并没有区别。下面我们来举个例子：</p> <div class="highlighter-rouge"><pre class="highlight"><code><span class="sr">//</span> <span class="s2">"变量或者属性的闭包表示"</span>
+<span class="sr">//</span> <span class="s2">"get和set"</span>
+<span class="n">var</span> <span class="ss">text: </span><span class="no">String</span> <span class="p">{</span>
+<span class="n">get</span><span class="p">{</span>
+    <span class="k">return</span> <span class="s2">"HelloWorld"</span>
+<span class="p">}</span>
+<span class="n">set</span><span class="p">{</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">newValue</span><span class="p">)</span>
+<span class="p">}</span>
+<span class="p">}</span>
+
+<span class="sr">//</span> <span class="s2">"又或者willGet和willSet"</span>
+<span class="n">var</span> <span class="ss">text: </span><span class="no">String</span> <span class="o">=</span> <span class="s2">"HelloWorld"</span> <span class="p">{</span>
+<span class="n">willSet</span><span class="p">{</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"newValue:</span><span class="se">\(</span><span class="s2">newValue)"</span><span class="p">)</span>
+<span class="p">}</span>
+<span class="n">didSet</span><span class="p">{</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">"oldValue:</span><span class="se">\(</span><span class="s2">oldValue)"</span><span class="p">)</span>
+<span class="p">}</span>
+<span class="p">}</span>
+<span class="sr">//</span> <span class="s2">"至于newValue和oldValue请自行查询"</span>
+</code></pre></div> <div class="highlighter-rouge"><pre class="highlight"><code><span class="sr">//</span> <span class="s2">"这是在某个UIViewController里面的成员变量"</span>
+<span class="kp">private</span> <span class="n">var</span> <span class="ss">iconImgView: </span><span class="no">UIImageView</span> <span class="o">=</span> <span class="p">{</span>
+	<span class="sr">//</span> <span class="s2">"请注意这里不要调用self.iconImgView，原因你会懂的"</span>
+    <span class="n">let</span> <span class="n">temp</span> <span class="o">=</span> <span class="no">UIImageView</span><span class="p">(</span><span class="ss">image: </span><span class="no">UIImage</span><span class="p">(</span><span class="ss">named: </span><span class="s2">"imageName"</span><span class="p">))</span>
+    <span class="n">temp</span><span class="p">.</span><span class="nf">frame</span> <span class="o">=</span> <span class="no">CGRectMake</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">temp</span>
+<span class="p">}()</span>
+</code></pre></div> <h2 id="trailing-closures">尾随闭包（Trailing Closures）</h2> <p>Trailing闭包是一个书写在函数括号之外(之后)的闭包表达式，函数支持将其作为最后一个参数调用。 也就是说，如果你需要将一个很长的闭包表达式作为最后一个参数传递给函数，可以使用trailing闭包来增强函数的可读性。</p> <p>比较正式点的写法大概是这样的:</p> <div class="highlighter-rouge"><pre class="highlight"><code><span class="sr">//</span> <span class="s2">"这是一个使用闭包的函数"</span>
+<span class="n">func</span> <span class="n">someFunctionThatTakesAClosure</span><span class="p">(</span><span class="ss">closure: </span><span class="p">()</span> <span class="o">-&gt;</span> <span class="p">())</span> <span class="p">{</span>
+    <span class="sr">//</span> <span class="s2">"这里是函数本身的实现过程代码"</span>
+<span class="p">}</span>
+<span class="sr">//</span> <span class="s2">"这是不使用尾随闭包的写法"</span>
+<span class="n">someFunctionThatTakesAClosure</span> <span class="p">({</span>
+    <span class="sr">//</span> <span class="s2">"这里写闭包的实现过程"</span>
+<span class="p">})</span>
+<span class="sr">//</span> <span class="s2">"这是使用尾随闭包的写法(注意和上面的区别)"</span>
+<span class="n">someFunctionThatTakesAClosure</span><span class="p">()</span> <span class="p">{</span>
+    <span class="sr">//</span> <span class="s2">"这里写尾随闭包的实现过程"</span>
+<span class="p">}</span>
+<span class="sr">//</span> <span class="s2">"如果函数只需要闭包表达式一个参数，当使用尾随闭包时，甚至可以把()省略掉。"</span>
+<span class="n">someFunctionThatTakesAClosure</span> <span class="p">{</span>
+    <span class="sr">//</span> <span class="s2">"这里写尾随闭包的实现过程"</span>
+<span class="p">}</span>
+</code></pre></div> <p>下面是一个具体的例子:</p> <div class="highlighter-rouge"><pre class="highlight"><code><span class="n">func</span> <span class="n">addTwoNumbers</span><span class="p">(</span><span class="ss">num1: </span><span class="no">Int</span><span class="p">,</span> <span class="ss">num2: </span><span class="no">Int</span><span class="p">,</span> <span class="no">CaluFunction</span><span class="p">:</span> <span class="p">(</span><span class="no">Int</span><span class="p">,</span> <span class="no">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="no">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="no">Int</span><span class="p">{</span>
+    <span class="k">return</span> <span class="no">CaluFunction</span><span class="p">(</span><span class="n">num1</span><span class="p">,</span> <span class="n">num2</span><span class="p">)</span>
+<span class="p">}</span>
+<span class="sr">//</span> <span class="s2">"内联闭包形式，不使用尾随闭包"</span>
+<span class="n">var</span> <span class="n">numReult1</span> <span class="o">=</span> <span class="n">addTwoNumbers</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="ss">num2: </span><span class="mi">3</span><span class="p">,</span><span class="no">CaluFunction</span><span class="p">:</span> <span class="p">{(</span><span class="ss">num1: </span><span class="no">Int</span><span class="p">,</span> <span class="ss">num2: </span><span class="no">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="no">Int</span> <span class="k">in</span>
+    <span class="k">return</span> <span class="n">num1</span> <span class="o">+</span> <span class="n">num2</span>
+<span class="p">})</span>
+<span class="sr">//</span> <span class="s2">"使用尾随闭包"</span>
+<span class="n">var</span> <span class="n">numReult2</span> <span class="o">=</span> <span class="n">addTwoNumbers</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="ss">num2: </span><span class="mi">4</span><span class="p">)</span> <span class="p">{</span>  <span class="vg">$0</span> <span class="o">+</span> <span class="vg">$1</span> <span class="p">}</span>
+</code></pre></div> <h2 id="section-7">捕获值</h2> <p>HOHO~还记得它么，既然我们已经铺垫了这么多，现在是时候来把这个坑来填上了。</p> <p>闭包可以在其定义的上下文中捕获常量或变量。 即使定义这些常量和变量的原域已经不存在，闭包仍然可以在闭包函数体内引用和修改这些值。</p> <p>Swift最简单的闭包形式是嵌套函数，也就是定义在其他函数的函数体内的函数。 嵌套函数可以捕获其外部函数所有的参数以及定义的常量和变量。</p> <p>先来个例子说明下捕获值的问题(PS:这个例子我是在网上找的，绝大多数的帖子都是复制的这个，相关资料也容易查找)，我就直接在代码中稍作解释，废话少说上代码:</p> <div class="highlighter-rouge"><pre class="highlight"><code><span class="sr">//</span> <span class="s2">"makeIncrementor返回类型为() -&gt; Int。 这意味着其返回的是一个函数，而不是一个简单类型值。 该函数在每次调用时不接受参数只返回一个Int类型的值。"</span>
+<span class="n">func</span> <span class="n">makeIncrementor</span><span class="p">(</span><span class="n">forIncrement</span> <span class="ss">amount: </span><span class="no">Int</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="p">()</span> <span class="o">-&gt;</span> <span class="no">Int</span> <span class="p">{</span>
+	<span class="sr">//</span> <span class="s2">"makeIncrementor有一个Int类型的参数，其外部命名为forIncrement， 内部命名为amount，表示每次incrementor被调用时runningTotal将要增加的量。"</span>
+    <span class="n">var</span> <span class="n">runningTotal</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="sr">//in</span><span class="n">crementor</span><span class="err">函数用来执行实际的增加操作。</span> <span class="err">该函数简单地使</span><span class="n">runningTotal</span><span class="err">增加</span><span class="n">amount</span><span class="err">，并将其返回。</span>
+    <span class="n">func</span> <span class="n">incrementor</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="no">Int</span> <span class="p">{</span>
+        <span class="n">runningTotal</span> <span class="o">+=</span> <span class="n">amount</span>
+        <span class="k">return</span> <span class="n">runningTotal</span>
+    <span class="p">}</span>
+    <span class="sr">//</span> <span class="s2">"请注意这里返回的是一个func"</span>
+    <span class="k">return</span> <span class="n">incrementor</span>
+<span class="p">}</span>
+
+<span class="sr">//</span> <span class="s2">"请注意，这里的ince是一个function，是makeIncrementor中返回的runningTotal，并非incrementor"</span>
+<span class="n">let</span> <span class="n">ince</span> <span class="o">=</span> <span class="n">makeIncrementor</span><span class="p">(</span><span class="ss">forIncrement: </span><span class="mi">3</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">ince</span><span class="p">())</span> <span class="o">/</span><span class="sr">/ "结果为 3"
+</span></code></pre></div> <p>然后针对返回的<code class="highlighter-rouge">func incrementor() -&gt; Int</code> 稍作分析：</p> <div class="highlighter-rouge"><pre class="highlight"><code><span class="sr">/**
+ 1. "incrementor函数并没有获取任何参数，但是在函数体内访问了`runningTotal`和`amount`变量。这是因为其通过捕获在包含它的函数体内已经存在的`runningTotal`和`amount`变量而实现。"
+ 2. "由于没有修改amount变量，incrementor实际上捕获并存储了该变量的一个副本，而该副本随着incrementor一同被存储。"
+ 3. "然而，因为每次调用该函数的时候都会修改`runningTotal`的值，`incrementor`捕获了当前`runningTotal`变量的引用，而不是仅仅复制该变量的初始值。捕获一个引用保证了当`makeIncrementor`结束时候并不会消失，也保证了当下一次执行`incrementor`函数时，`runningTotal`可以继续增加。"
+ */</span>
+<span class="n">func</span> <span class="n">incrementor</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="no">Int</span> <span class="p">{</span>
+    <span class="n">runningTotal</span> <span class="o">+=</span> <span class="n">amount</span>
+    <span class="k">return</span> <span class="n">runningTotal</span>
+<span class="p">}</span>
+</code></pre></div> <p>PS:</p> <div class="highlighter-rouge"><pre class="highlight"><code>1. Swift会决定捕获引用还是拷贝值。
+2. 不需要标注`amount`或者`runningTotal`来声明在嵌入的`incrementor`函数中的使用方式。
+3. Swift同时也处理`runingTotal`变量的内存管理操作，如果不再被`incrementor`函数使用，则会被清除。
+</code></pre></div> <p>明白了这些以后，我们继续来测试，连续调用几次 ince() 试试看会有什么结果:</p> <div class="highlighter-rouge"><pre class="highlight"><code><span class="n">let</span> <span class="n">ince</span> <span class="o">=</span> <span class="n">makeIncrementor</span><span class="p">(</span><span class="ss">forIncrement: </span><span class="mi">3</span><span class="p">)</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">ince</span><span class="p">())</span> <span class="o">/</span><span class="sr">/ "结果为 3"
+/</span><span class="o">/</span> <span class="s2">"接着在我们之前的代码，后面继续添加这几行,看返回的结果"</span>
+<span class="n">ince</span><span class="p">()</span>	<span class="o">/</span><span class="sr">/ 6
+ince()	/</span><span class="o">/</span> <span class="mi">9</span>
+<span class="n">ince</span><span class="p">()</span>	<span class="o">/</span><span class="sr">/ 12
+</span></code></pre></div> <p>可以看到的是，ince()返回的值是递增的，也意味着，它把之前的返回值<code class="highlighter-rouge">runningTotal</code>保存了下来。 <code class="highlighter-rouge">let ince = ...</code>定义了一个叫做<code class="highlighter-rouge">ince</code>的常量，该常量指向一个每次调用会加3的<code class="highlighter-rouge">incrementro</code>函数，这就是一个关键的地方。</p> <p>让我们来继续：</p> <div class="highlighter-rouge"><pre class="highlight"><code><span class="sr">//</span> <span class="s2">"如果创建了另一个incrementor，其会有一个属于自己的独立的runningTotal变量的引用。 下面的例子中，inceNew捕获了一个新的runningTotal变量，该变量和incrementByTen中捕获的变量没有任何联系："</span>
+<span class="n">let</span> <span class="n">inceNew</span> <span class="o">=</span> <span class="n">makeIncrementor</span><span class="p">(</span><span class="ss">forIncrement: </span><span class="mi">10</span><span class="p">)</span>
+<span class="n">inceNew</span><span class="p">()</span>	<span class="o">/</span><span class="sr">/ 10
+ince()	/</span><span class="o">/</span> <span class="mi">15</span><span class="p">(</span><span class="err">又加了一次</span><span class="p">)</span>
+</code></pre></div> <p>PS:</p> <div class="highlighter-rouge"><pre class="highlight"><code>* 如果将闭包赋值给一个类实例的属性，并且该闭包通过指向该实例或其成员来捕获了该实例，那么将会创建一个在闭包和实例间的强引用环。
+* Swift 使用捕获列表来打破这种强引用环。更多信息，请参考 [闭包引起的循环强引用](http://www.yiibai.com/swift/strong_reference_cycles_for_closures.html)。
+</code></pre></div> <p>那么问题来了，不是说好的 <code class="highlighter-rouge">ince()</code> 和 <code class="highlighter-rouge">inceNew()</code>是<code class="highlighter-rouge">let</code>出来的常量么，怎么还能一直改变值呢？很简单，因为函数(func)和闭包(closures)都是 <strong><code class="highlighter-rouge">引用类型</code></strong> 。</p> <p>当你指定一个函数或一个闭包常量/变量时，实际上是在设置该常量或变量是否为一个引用函数。在上面的例子中，ince是个闭包，ince指向的是恒定的，而不是封闭件本身的内容是恒定的。这也意味着，如果你分配一个封闭两种不同的常量或变量，这两个常量或变量将引用同一个闭包：</p> <div class="highlighter-rouge"><pre class="highlight"><code><span class="n">let</span> <span class="n">anotherInce</span> <span class="o">=</span> <span class="n">ince</span>
+<span class="n">anotherInce</span><span class="p">()</span> <span class="o">/</span><span class="sr">/ 18
+</span></code></pre></div> <h2 id="nonescaping-closuresswiftblock">非逃逸闭包(Nonescaping Closures)和swift中的block</h2> <p>等了这么久，也终于说到这个地方了。学闭包为了啥，反正我当时就是为了可以写一个block。。。可是swift中并没有OC中的block。没关系，我们可以用闭包来实现block相同的功能。</p> <p>首先，要解释一下逃逸和非逃逸的闭包与block有啥关系。</p> <p>一个闭包作为参数传到一个函数中，但是这个闭包在函数返回之后才被执行，我们称该闭包从函数中逃逸。可以在参数名之前标注<code class="highlighter-rouge">@noescape</code>，用来指明这个闭包是不允许“逃逸”出这个函数的。将闭包标注<code class="highlighter-rouge">@noescape</code>能使编译器知道这个闭包的生命周期.</p> <p>像数组中有提供的一个sort方法，函数中的参数就定义成了非逃逸闭包。</p> <div class="highlighter-rouge"><pre class="highlight"><code><span class="kp">public</span> <span class="n">func</span> <span class="n">sort</span><span class="p">(</span><span class="vi">@noescape</span> <span class="ss">isOrderedBefore: </span><span class="p">(</span><span class="no">Self</span><span class="o">.</span><span class="no">Generator</span><span class="o">.</span><span class="no">Element</span><span class="p">,</span> <span class="no">Self</span><span class="o">.</span><span class="no">Generator</span><span class="o">.</span><span class="no">Element</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="no">Bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="p">[</span><span class="no">Self</span><span class="o">.</span><span class="no">Generator</span><span class="o">.</span><span class="no">Element</span><span class="p">]</span>
+</code></pre></div> <p>非逃逸的闭包目前在我的经验中用的比较少，更多的时候是用逃逸闭包。举个例子：很多启动异步操作的函数接受一个闭包参数作为 <code class="highlighter-rouge">completion handler</code>。这类函数会在异步操作开始之后立刻返回，但是闭包直到异步操作结束后才会被调用。在这种情况下，闭包需要“逃逸”出函数，因为闭包需要在函数返回之后被调用。</p> <p>这里说明，非逃逸闭包和逃逸闭包讲的不是执行先后顺序。非逃逸是指你的闭包不能在函数外单独调用,只能在函数内部调用,函数调用完成后,那个闭包也就结束了。</p> <div class="highlighter-rouge"><pre class="highlight"><code><span class="n">var</span> <span class="n">completionHandler</span> <span class="o">=</span> <span class="p">{(</span><span class="ss">finished: </span><span class="no">Bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="no">Void</span> <span class="k">in</span><span class="p">}</span>
+<span class="n">func</span> <span class="n">testDoSomething</span><span class="p">(</span><span class="ss">finishedClosure: </span><span class="p">(</span><span class="no">Bool</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="no">Void</span><span class="p">)</span> <span class="p">{</span>
+    <span class="sr">//</span> <span class="s2">"进行一些操作，确认完成后，然后调用传入的闭包参数，并给闭包传参"</span>
+    <span class="n">finishedClosure</span><span class="p">(</span><span class="kp">true</span><span class="p">)</span>
+<span class="p">}</span>
+<span class="sr">//</span> <span class="s2">"调用函数"</span>
+<span class="n">testDoSomething</span> <span class="p">{</span> <span class="p">(</span><span class="n">done</span><span class="p">)</span> <span class="k">in</span>
+	<span class="sr">//</span> <span class="s2">"实现completionHandler"</span>
+    <span class="k">if</span> <span class="n">done</span> <span class="p">{</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">"task is done"</span><span class="p">)</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</code></pre></div> <h2 id="section-8">未完待续，持续更新中</h2> <div class="entry-meta"> <br> <hr> <span class="entry-tags"><a href="https://LSnail.github.io/tags/#Swift" title="Pages tagged Swift" class="tag"><span class="term">Swift</span></a></span> <span class="social-share"> <a href="https://www.facebook.com/sharer/sharer.php?u=https://LSnail.github.io/swift-closure/" title="Share on Facebook" class="tag"> <span class="term"><i class="fa fa-facebook-square"></i> Like</span> </a> <a href="https://twitter.com/intent/tweet?text=https://LSnail.github.io/swift-closure/" title="Share on Twitter" class="tag"> <span class="term"><i class="fa fa-twitter-square"></i> Tweet</span> </a> <a href="https://plus.google.com/share?url=https://LSnail.github.io/swift-closure/" title="Share on Google+" class="tag"> <span class="term"><i class="fa fa-google-plus-square"></i> +1</span> </a> </span> <div style="clear:both"></div> </div> </div> </div> <section id="disqus_thread" class="animated fadeInUp"></section><!-- /#disqus_thread --> </header> <!-- JS --> <script src="https://LSnail.github.io/assets/js/jquery-1.12.0.min.js"></script> <script src="https://LSnail.github.io/assets/js/jquery.dlmenu.min.js"></script> <script src="https://LSnail.github.io/assets/js/jquery.goup.min.js"></script> <script src="https://LSnail.github.io/assets/js/jquery.magnific-popup.min.js"></script> <script src="https://LSnail.github.io/assets/js/jquery.fitvid.min.js"></script> <script src="https://LSnail.github.io/assets/js/scripts.js"></script> <script type="text/javascript"> var disqus_shortname = 'taylantatli'; (function() { var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true; dsq.src = '//' + disqus_shortname + '.disqus.com/embed.js'; (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq); })(); (function () { var s = document.createElement('script'); s.async = true; s.type = 'text/javascript'; s.src = '//' + disqus_shortname + '.disqus.com/count.js'; (document.getElementsByTagName('HEAD')[0] || document.getElementsByTagName('BODY')[0]).appendChild(s); }()); </script> <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a>
+</noscript> <!-- MathJax --> <script async src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script> </body> </html>

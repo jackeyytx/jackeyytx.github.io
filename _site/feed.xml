@@ -1,0 +1,1039 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+<generator uri="http://jekyllrb.com" version="3.1.6">Jekyll</generator>
+<link href="https://LSnail.github.io/feed.xml" rel="self" type="application/atom+xml" />
+<link href="https://LSnail.github.io/" rel="alternate" type="text/html" />
+<updated>2017-04-14T21:06:15+08:00</updated>
+<id>https://LSnail.github.io/</id>
+<subtitle>Learn + Share = Progress</subtitle>
+<entry>
+<title>iOS 多线程</title>
+<link href="https://LSnail.github.io/iOS-multi-async/" rel="alternate" type="text/html" title="iOS 多线程" />
+<published>2016-06-11T00:00:00+08:00</published>
+<updated>2016-06-11T00:00:00+08:00</updated>
+<id>https://LSnail.github.io/iOS multi async</id>
+<content type="html" xml:base="https://LSnail.github.io/iOS-multi-async/">&lt;h1 id=&quot;section&quot;&gt;概述&lt;/h1&gt;
+
+&lt;p&gt;多线程是实现单个应用程序内多个代码的执行路径。概念不再赘述，直接开始正题。&lt;/p&gt;
+
+&lt;p&gt;PS：Swift中并没有使用新一套的线程，而是继续使用OC原有的一套线程。&lt;/p&gt;
+
+&lt;p&gt;在iOS中目前有&lt;strong&gt;4&lt;/strong&gt;套多线程实现的方案：&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;* Pthreads
+* NSThread
+* Cocoa NSOperation (NSOperation &amp;amp; NSOperationQueue)
+* GCD (Grand Central Dispatch)
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;这里稍微介绍一下它们的特点。&lt;/p&gt;
+
+&lt;h4 id=&quot;pthreads&quot;&gt;1. Pthreads&lt;/h4&gt;
+
+&lt;p&gt;是的，比较生疏的一种，因为我不会使用它，或者说因为它是基于&lt;code class=&quot;highlighter-rouge&quot;&gt;C语言&lt;/code&gt;的框架，可以在很多操作系统上通用的多线程API，平常在开发中并不会用到，所以想要从底层开始定制一套多线程方案的话，它也许是个不错的选择。具体的可以自行搜索用法。&lt;/p&gt;
+
+&lt;h4 id=&quot;nsthread&quot;&gt;2. NSThread&lt;/h4&gt;
+
+&lt;p&gt;这套方案是经过Apple封装过的，完全面向对象的。
+轻量级上来说是最轻的，但需要自己管理线程的生命周期和线程同步。线程同步对数据的加锁会有一定的系统开销。&lt;/p&gt;
+
+&lt;h4 id=&quot;nsoperation&quot;&gt;3. NSOperation&lt;/h4&gt;
+
+&lt;p&gt;NSOperation不需要关心线程管理和数据同步的事情，可以把精力放在需要执行的操作上。
+相关的类有&lt;code class=&quot;highlighter-rouge&quot;&gt;NSOperation&lt;/code&gt;和&lt;code class=&quot;highlighter-rouge&quot;&gt;NSOperationQueue&lt;/code&gt;，具体用法见下文。&lt;/p&gt;
+
+&lt;h4 id=&quot;gcd&quot;&gt;4. GCD&lt;/h4&gt;
+
+&lt;p&gt;重点来了，GCD是Apple开发的一个多核编程的解决方案，可以自动合理的利用现有资源（多个CPU内核），同时自动管理线程的生命周期。
+GCD是一个替代以上三种方案的高效强大的技术，也是Apple最推荐使用的套路 :)&lt;/p&gt;
+
+&lt;h1 id=&quot;nsthread-&quot;&gt;NSThread 详解&lt;/h1&gt;
+
+&lt;p&gt;首先来在ViewController中创建一个线程：&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;sr&quot;&gt;//&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;类方法--直接创建并且自动启动&quot;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;let&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;thread&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;NSThread&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;detachNewThreadSelector&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;c1&quot;&gt;#selector(ViewController.downLoadTask), toTarget: self, withObject: nil)&lt;/span&gt;
+
+&lt;span class=&quot;sr&quot;&gt;//&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;实例方法--创建一个线程对象，然后手动运行线程&quot;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;let&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;thread&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;NSThread&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;target: &lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;selector: &lt;/span&gt;&lt;span class=&quot;c1&quot;&gt;#selector(ViewController.runThread), object: nil)&lt;/span&gt;
+
+&lt;span class=&quot;n&quot;&gt;thread&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;start&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;
+
+&lt;span class=&quot;sr&quot;&gt;//&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;PS:由于我的代码高亮样式没有调整好，所以#selector这部分比较灰暗，见谅 ^_^&quot;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+</content>
+<category term="iOS基础" />
+<summary>多线程详解</summary>
+</entry>
+<entry>
+<title>Swift Closure – 闭包从入门到进阶</title>
+<link href="https://LSnail.github.io/swift-closure/" rel="alternate" type="text/html" title="Swift Closure -- 闭包从入门到进阶" />
+<published>2016-06-11T00:00:00+08:00</published>
+<updated>2016-06-11T00:00:00+08:00</updated>
+<id>https://LSnail.github.io/swift closure</id>
+<content type="html" xml:base="https://LSnail.github.io/swift-closure/">&lt;h2 id=&quot;section&quot;&gt;写在前面&lt;/h2&gt;
+
+&lt;p&gt;在我们开始话题之前，先来说说我们可以继续愉快的聊下去的几个前提：&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;你知道swift是一门牛逼的语言(说PHP是最好的语言的童鞋们，你们先放下手里的板砖，有话好好说!)&lt;/li&gt;
+  &lt;li&gt;你了解swift的基本语法，包括什么是变量和func，以及怎么写一个func并调用它(“闭嘴，这用你来哔哔哔？”)&lt;/li&gt;
+  &lt;li&gt;你现在身怀两门绝技，一种专门对付像我一样的菜鸟，抬手就让我等跪地唱征服，它叫做&lt;a href=&quot;https://www.baidu.com&quot; class=&quot;btn&quot;&gt;百度一下你就知道了&lt;/a&gt;；另一种是用来高手过招，一出手风云变幻翻江倒海，下证命理上破虚空，名为&lt;a href=&quot;https://www.google.com&quot; class=&quot;btn&quot;&gt;谷歌一下你就什么都不知道了&lt;/a&gt;&lt;/li&gt;
+  &lt;li&gt;最重要的一点，你现在一点都不想揍我(你保证么？)，那么，让我们开始听我来详(xia)细(bi)讲(bi)一下，&lt;strong&gt;我所理解的swift闭包&lt;/strong&gt;(文章为@Toki_Han原创，引用内容在中间和最后均有注明)&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;h1 id=&quot;section-1&quot;&gt;什么是闭包&lt;/h1&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;&lt;strong&gt;闭包（Closures）是独立的函数代码块，能在代码中传递及使用。Swift中的闭包与C和Objective-C中的代码块及其它编程语言中的匿名函数相似。&lt;/strong&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;&lt;strong&gt;闭包可以在上下文的范围内捕获、存储任何被定义的常量和变量引用。因这些常量和变量的封闭性，而命名为“闭包（Closures）”。Swift能够对所有你所能捕获到的引用进行内存管理。&lt;/strong&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;&lt;strong&gt;PS:&lt;/strong&gt; 说的这么高大上，所以最后闭包到底是个什么鬼？好吧，其实它就是类似OC里面的&lt;code class=&quot;highlighter-rouge&quot;&gt;block&lt;/code&gt;(请注意，是类似！并不是同一种东西)，或者类似JavaScript里面的&lt;code class=&quot;highlighter-rouge&quot;&gt;匿名自执行函数&lt;/code&gt;(JS:”你哪来的，别和我扯进乎哈”)。&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;再PS:&lt;/strong&gt; 那&lt;code class=&quot;highlighter-rouge&quot;&gt;捕获（capturing）&lt;/code&gt;又是什么鬼？这个东西说出来你可能不信，它其实就是&lt;code class=&quot;highlighter-rouge&quot;&gt;引用/得到&lt;/code&gt;(get/set)的高大上说法，用于捕捉某个范围内的常量和变量的值。这个有什么意义呢，我们后面会慢慢说。&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;再再PS:&lt;/strong&gt;&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;* 全局函数都是闭包，特点是有函数名但没有捕获任何值。
+* 嵌套函数都是闭包，特点是有函数名，并且可以在它封闭的函数中捕获值。
+* 闭包表达式都是闭包，特点是没有函数名，可以使用轻量的语法在它所围绕的上下文中捕获值。
+* 变量和常量也可以用闭包来表示。
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h1 id=&quot;section-2&quot;&gt;闭包能干嘛&lt;/h1&gt;
+
+&lt;p&gt;我和你说，闭包老厉害了~大神们写的出神入化的代码，里面肯定少不了各种闭包，先看看人家怎么形容的(来自letsswift.com)：&lt;/p&gt;
+
+&lt;blockquote&gt;
+  &lt;p&gt;&lt;strong&gt;Swift的闭包表达式有着干净，清晰的风格，并常见情况下对于鼓励简短、整洁的语法做出优化。这些优化包括：
+	推理参数及返回值类型源自上下文
+	隐式返回源于单一表达式闭包
+	简约参数名
+	尾随闭包语法&lt;/strong&gt;&lt;/p&gt;
+&lt;/blockquote&gt;
+
+&lt;p&gt;好吧，我墨水少，我不会形容，但是我看明白了，闭包俩作用：&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;好看!&lt;/code&gt;&lt;/strong&gt;		&lt;strong&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;厉害!&lt;/code&gt;&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;你想想哈，我用二十行的代码写的一个func，你用三行写出来了，还更简洁明了，调用的时候就像雪碧一样心飞扬，这是一件多有范儿的事情！废话到此为止，let’s get it!&lt;/p&gt;
+
+&lt;h1 id=&quot;section-3&quot;&gt;闭包怎么用（纯干货）&lt;/h1&gt;
+
+&lt;p class=&quot;notice&quot;&gt;严重申明：我已经看了太多的 &lt;code class=&quot;highlighter-rouge&quot;&gt;intArray.sortInPlace({$0 &amp;gt;= $1})&lt;/code&gt; 这种代码的帖子了，只想说一句，大神们你们写的很详细了，我也看懂了，但是为啥非要用 &lt;code class=&quot;highlighter-rouge&quot;&gt;public mutating func sortInPlace()&lt;/code&gt; 这个方法上手很麻烦呐，内心一直有一种不安全感提醒我，真的完全明白了吗？所以，我打算从最基础的 1 + 2 写起，先入门再说。&lt;/p&gt;
+
+&lt;p&gt;是不是已经感觉迫(废)不(话)及(好)待(多)了呢？来写一个闭包来展示下老夫的手段？那先来看看闭包的定义形式：&lt;/p&gt;
+
+&lt;h4 id=&quot;section-4&quot;&gt;闭包最全的定义形式是:&lt;/h4&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;参数&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;参数类型&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;返回值类型&lt;/span&gt;  &lt;span class=&quot;k&quot;&gt;in&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;code&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;xxxxx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}(&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;需要传的参数&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;PS：我的理解是，这里的闭包和JavaScript里的匿名自执行函数非常的相似，我们关注的地方在于可以在内部实现什么，而不是在外面如何使用它。&lt;/p&gt;
+
+&lt;h4 id=&quot;swift&quot;&gt;感谢swift提供的类型推导，它可以根据后面括号里传的参数，自动判断参数的类型，所以我们可以把闭包内部的参数的类型省略掉：&lt;/h4&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;参数&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;返回值类型&lt;/span&gt;  &lt;span class=&quot;k&quot;&gt;in&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;code&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;xxxxx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}(&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;需要传的参数&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h4 id=&quot;section-5&quot;&gt;或者把闭包中的返回值类型省略掉，但是有一点注意，当你把参数和返回值类型同时省略的时候，一定要在外部声明这个闭包返回值类型(要不你什么都不说清楚，代码怎么知道你想要个啥啊)&lt;/h4&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;参数&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;in&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;code&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;xxxxx&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}(&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;需要传的参数&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h4 id=&quot;return&quot;&gt;最后，其实参数也是可以省略的，用&lt;strong&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;$&lt;/code&gt;&lt;/strong&gt;来调用函数内部给参数默认分配的名字。如果闭包中只有简单的一行代码，关键字&lt;strong&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;return&lt;/code&gt;&lt;/strong&gt;也是可以省略的，这部分请见下面的例子。&lt;/h4&gt;
+
+&lt;h4 id=&quot;playground&quot;&gt;正式上代码(以下代码在playground中完成并测试)&lt;/h4&gt;
+&lt;p&gt;这里我就用一个简单的加法运算来说明下，有一点要牢记：&lt;strong&gt;swift中，函数是一等公民！&lt;/strong&gt;(有关这个问题请自行施放百度/Google绝技):&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;sr&quot;&gt;//&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;不使用闭包来实现两数字相加&quot;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;func&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;getSum&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;a&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;a: &lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Int&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;b: &lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Int&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Int&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;b&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+&lt;span class=&quot;n&quot;&gt;var&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sum&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;getSum&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;a: &lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;3&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;b: &lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;5&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;sr&quot;&gt;//&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;sum = 8&quot;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;sr&quot;&gt;//&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;现在我们用闭包来实现相同功能&quot;&lt;/span&gt;
+&lt;span class=&quot;sr&quot;&gt;//&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;这里的sumClosure实质上是一个(Int, Int) -&amp;gt; Int的func&quot;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;let&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sumClosure&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;a: &lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Int&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;b: &lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Int&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Int&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;in&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;b&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;var&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;sum: &lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Int&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sumClosure&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;3&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;5&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;sr&quot;&gt;//&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;sum = 8&quot;&lt;/span&gt;
+
+
+&lt;span class=&quot;sr&quot;&gt;//&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;或者我们干脆这么写(这里就已经是用闭包对变量/属性进行操作了)&quot;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;var&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;sum: &lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Int&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;a: &lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Int&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;b: &lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Int&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Int&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;in&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;b&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;3&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;5&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;现在让我们开始对这个可怜的sum进行各种砍掉砍掉：&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;sr&quot;&gt;//&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;省略参数类型&quot;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;var&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sum&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;b&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Int&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;in&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;b&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;3&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;5&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+
+&lt;span class=&quot;sr&quot;&gt;//&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;然后省略返回值类型(要注意在外部还要声明类型的哦~)&quot;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;var&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;sum: &lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Int&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;b&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;in&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;a&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;b&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;3&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;5&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+
+&lt;span class=&quot;sr&quot;&gt;//&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;3&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;效果不行，这么长怎么玩，我们把中间那行丑爆了的删掉&quot;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;var&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;sum: &lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Int&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;vg&quot;&gt;$0&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;vg&quot;&gt;$1&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;sr&quot;&gt;/ &quot;关于$是什么意思请自行查找&quot;
+}(3,5)
+
+/&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;/&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;4&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;还可以砍么？答案是当然的！把碍眼的return砍掉！&quot;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;var&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;sum: &lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Int&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;vg&quot;&gt;$0&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;vg&quot;&gt;$1&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;3&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;5&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+
+&lt;span class=&quot;sr&quot;&gt;//&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;5&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;激动人心的时刻到了，把它写在一行里面！&quot;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;var&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;sum: &lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Int&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;vg&quot;&gt;$0&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;vg&quot;&gt;$1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;3&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;5&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;如何，最终的效果是不是很高大上？别急，这里有几个&lt;strong&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;重要问题&lt;/code&gt;&lt;/strong&gt;需要说明：&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;
+    &lt;p&gt;这里声明了 &lt;code class=&quot;highlighter-rouge&quot;&gt;var sum: Int&lt;/code&gt; ，主要是为了方便理解，平常用的时候是不会多这么一步的，把闭包当参数/返回值的时候再冒出来一个var，啧啧，水(逼)平(格)一下子就low了很多，所以可以这么写: someFunc(aString,{$0 + $1}(3,5))&lt;/p&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;p&gt;这点很重要，那就是为啥别人的闭包后面都没有(3,5)这种影响市容的玩意儿？那是因为啊，我没写一个合适的方法来使用这个闭包。(3,5)的作用，就相当于我立马在声明了这个闭包以后，就马上调用了这个闭包并给它传入参数。现在还是为了方便理解阶段呢，别急嘛~下面来个完整点的&lt;/p&gt;
+  &lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;func&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;printSum&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;string1&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;str1: &lt;/span&gt;&lt;span class=&quot;no&quot;&gt;String&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;string2&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;str2: &lt;/span&gt;&lt;span class=&quot;no&quot;&gt;String&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;result: &lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Int&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Int&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Int&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;let&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;count&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;result&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;str1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;characters&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;count&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;str2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;characters&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;count&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;nb&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\(&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;str1) and &lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\(&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;str2)--&amp;gt; total length is: &lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\(&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;count)&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+&lt;span class=&quot;n&quot;&gt;printSum&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;string1: &lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;hello&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;string2: &lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;world&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;result: &lt;/span&gt;&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;&lt;span class=&quot;vg&quot;&gt;$0&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;vg&quot;&gt;$1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;})&lt;/span&gt;
+&lt;span class=&quot;sr&quot;&gt;//&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;打印出的结果为  hello and world--&amp;gt; total length is: 10&quot;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p class=&quot;notice&quot;&gt;这里需要说明的是： 当你需要将一个闭包当做参数使用的时候，如果要给闭包本身传参，那就需要有一个合适的、对应的函数参数来接收闭包作为参数。在上面的例子中，printSum这个函数的作用就是打印两个字符串的总长度，这里第三个参数result就被声明为了：接收两个Int参数的闭包函数，并且返回两个参数的和。这也就是有了好车子就得买贵点的保险的道理。&lt;/p&gt;
+
+&lt;p&gt;说到这里，相信童鞋们应该对闭包这货有点大致的理解了吧。其实上面所有的东西加起来，只是说明白(但愿吧)了闭包是什么和怎么写的问题。语法上来说并不难理解，而且闭包的使用也是非常灵活的。用好了，代码美观不说，最大的好处是当别人看的时候…啧啧，你们可以脑补一下 ^o^。多加练习总能写出自己的风(bi)格(ge)来~&lt;/p&gt;
+
+&lt;p&gt;Wait~！你以为这就完了？呵呵，太天真了。。。说了是纯干货的，会有这么简单么？来，倒杯咖啡，听我接着给你吹…啊不，接着说一下闭包的进阶形态。&lt;/p&gt;
+
+&lt;h2 id=&quot;section-6&quot;&gt;属性的闭包&lt;/h2&gt;
+
+&lt;p&gt;应该知道的是，类的属性可以用闭包来表示，可以在闭包中定义set,get,willSet,willGet等方法。就算是你当时并不清楚这个是闭包，但是肯定见过这样的写法。而且不仅仅是类的属性，变量也是可以这么做的，写法上面并没有区别。下面我们来举个例子：&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;sr&quot;&gt;//&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;变量或者属性的闭包表示&quot;&lt;/span&gt;
+&lt;span class=&quot;sr&quot;&gt;//&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;get和set&quot;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;var&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;text: &lt;/span&gt;&lt;span class=&quot;no&quot;&gt;String&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;get&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;HelloWorld&quot;&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;set&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;nb&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;newValue&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+&lt;span class=&quot;sr&quot;&gt;//&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;又或者willGet和willSet&quot;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;var&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;text: &lt;/span&gt;&lt;span class=&quot;no&quot;&gt;String&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;HelloWorld&quot;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;willSet&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;nb&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;newValue:&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\(&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;newValue)&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;didSet&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;nb&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;oldValue:&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;\(&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;oldValue)&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;sr&quot;&gt;//&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;至于newValue和oldValue请自行查询&quot;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;sr&quot;&gt;//&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;这是在某个UIViewController里面的成员变量&quot;&lt;/span&gt;
+&lt;span class=&quot;kp&quot;&gt;private&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;var&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;iconImgView: &lt;/span&gt;&lt;span class=&quot;no&quot;&gt;UIImageView&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+	&lt;span class=&quot;sr&quot;&gt;//&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;请注意这里不要调用self.iconImgView，原因你会懂的&quot;&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;let&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;temp&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;UIImageView&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;image: &lt;/span&gt;&lt;span class=&quot;no&quot;&gt;UIImage&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;named: &lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;imageName&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;))&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;temp&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;frame&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;CGRectMake&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;100&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;100&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;temp&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}()&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h2 id=&quot;trailing-closures&quot;&gt;尾随闭包（Trailing Closures）&lt;/h2&gt;
+
+&lt;p&gt;Trailing闭包是一个书写在函数括号之外(之后)的闭包表达式，函数支持将其作为最后一个参数调用。
+也就是说，如果你需要将一个很长的闭包表达式作为最后一个参数传递给函数，可以使用trailing闭包来增强函数的可读性。&lt;/p&gt;
+
+&lt;p&gt;比较正式点的写法大概是这样的:&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;sr&quot;&gt;//&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;这是一个使用闭包的函数&quot;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;func&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;someFunctionThatTakesAClosure&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;closure: &lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;())&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;sr&quot;&gt;//&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;这里是函数本身的实现过程代码&quot;&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;sr&quot;&gt;//&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;这是不使用尾随闭包的写法&quot;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;someFunctionThatTakesAClosure&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;({&lt;/span&gt;
+    &lt;span class=&quot;sr&quot;&gt;//&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;这里写闭包的实现过程&quot;&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;})&lt;/span&gt;
+&lt;span class=&quot;sr&quot;&gt;//&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;这是使用尾随闭包的写法(注意和上面的区别)&quot;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;someFunctionThatTakesAClosure&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;sr&quot;&gt;//&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;这里写尾随闭包的实现过程&quot;&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;sr&quot;&gt;//&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;如果函数只需要闭包表达式一个参数，当使用尾随闭包时，甚至可以把()省略掉。&quot;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;someFunctionThatTakesAClosure&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;sr&quot;&gt;//&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;这里写尾随闭包的实现过程&quot;&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;下面是一个具体的例子:&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;func&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;addTwoNumbers&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;num1: &lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Int&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;num2: &lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Int&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;CaluFunction&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Int&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Int&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Int&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Int&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;CaluFunction&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;num1&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;num2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;sr&quot;&gt;//&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;内联闭包形式，不使用尾随闭包&quot;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;var&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;numReult1&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;addTwoNumbers&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;num2: &lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;3&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;CaluFunction&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{(&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;num1: &lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Int&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;num2: &lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Int&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Int&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;in&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;num1&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;num2&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;})&lt;/span&gt;
+&lt;span class=&quot;sr&quot;&gt;//&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;使用尾随闭包&quot;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;var&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;numReult2&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;addTwoNumbers&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;3&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;num2: &lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;4&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;  &lt;span class=&quot;vg&quot;&gt;$0&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;vg&quot;&gt;$1&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h2 id=&quot;section-7&quot;&gt;捕获值&lt;/h2&gt;
+
+&lt;p&gt;HOHO~还记得它么，既然我们已经铺垫了这么多，现在是时候来把这个坑来填上了。&lt;/p&gt;
+
+&lt;p&gt;闭包可以在其定义的上下文中捕获常量或变量。 即使定义这些常量和变量的原域已经不存在，闭包仍然可以在闭包函数体内引用和修改这些值。&lt;/p&gt;
+
+&lt;p&gt;Swift最简单的闭包形式是嵌套函数，也就是定义在其他函数的函数体内的函数。 嵌套函数可以捕获其外部函数所有的参数以及定义的常量和变量。&lt;/p&gt;
+
+&lt;p&gt;先来个例子说明下捕获值的问题(PS:这个例子我是在网上找的，绝大多数的帖子都是复制的这个，相关资料也容易查找)，我就直接在代码中稍作解释，废话少说上代码:&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;sr&quot;&gt;//&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;makeIncrementor返回类型为() -&amp;gt; Int。 这意味着其返回的是一个函数，而不是一个简单类型值。 该函数在每次调用时不接受参数只返回一个Int类型的值。&quot;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;func&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;makeIncrementor&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;forIncrement&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;amount: &lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Int&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Int&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+	&lt;span class=&quot;sr&quot;&gt;//&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;makeIncrementor有一个Int类型的参数，其外部命名为forIncrement， 内部命名为amount，表示每次incrementor被调用时runningTotal将要增加的量。&quot;&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;var&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;runningTotal&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;
+    &lt;span class=&quot;sr&quot;&gt;//in&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;crementor&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;函数用来执行实际的增加操作。&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;该函数简单地使&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;runningTotal&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;增加&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;amount&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;，并将其返回。&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;func&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;incrementor&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Int&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;n&quot;&gt;runningTotal&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;amount&lt;/span&gt;
+        &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;runningTotal&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+    &lt;span class=&quot;sr&quot;&gt;//&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;请注意这里返回的是一个func&quot;&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;incrementor&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+
+&lt;span class=&quot;sr&quot;&gt;//&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;请注意，这里的ince是一个function，是makeIncrementor中返回的runningTotal，并非incrementor&quot;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;let&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ince&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;makeIncrementor&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;forIncrement: &lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;3&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;nb&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ince&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;())&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;sr&quot;&gt;/ &quot;结果为 3&quot;
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;然后针对返回的&lt;code class=&quot;highlighter-rouge&quot;&gt;func incrementor() -&amp;gt; Int&lt;/code&gt; 稍作分析：&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;sr&quot;&gt;/**
+ 1. &quot;incrementor函数并没有获取任何参数，但是在函数体内访问了`runningTotal`和`amount`变量。这是因为其通过捕获在包含它的函数体内已经存在的`runningTotal`和`amount`变量而实现。&quot;
+ 2. &quot;由于没有修改amount变量，incrementor实际上捕获并存储了该变量的一个副本，而该副本随着incrementor一同被存储。&quot;
+ 3. &quot;然而，因为每次调用该函数的时候都会修改`runningTotal`的值，`incrementor`捕获了当前`runningTotal`变量的引用，而不是仅仅复制该变量的初始值。捕获一个引用保证了当`makeIncrementor`结束时候并不会消失，也保证了当下一次执行`incrementor`函数时，`runningTotal`可以继续增加。&quot;
+ */&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;func&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;incrementor&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Int&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;runningTotal&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;amount&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;runningTotal&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;PS:&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;1. Swift会决定捕获引用还是拷贝值。
+2. 不需要标注`amount`或者`runningTotal`来声明在嵌入的`incrementor`函数中的使用方式。
+3. Swift同时也处理`runingTotal`变量的内存管理操作，如果不再被`incrementor`函数使用，则会被清除。
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;明白了这些以后，我们继续来测试，连续调用几次 ince() 试试看会有什么结果:&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;let&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ince&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;makeIncrementor&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;forIncrement: &lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;3&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;nb&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ince&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;())&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;sr&quot;&gt;/ &quot;结果为 3&quot;
+/&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;/&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;接着在我们之前的代码，后面继续添加这几行,看返回的结果&quot;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;ince&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;	&lt;span class=&quot;o&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;sr&quot;&gt;/ 6
+ince()	/&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;/&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;9&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;ince&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;	&lt;span class=&quot;o&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;sr&quot;&gt;/ 12
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;可以看到的是，ince()返回的值是递增的，也意味着，它把之前的返回值&lt;code class=&quot;highlighter-rouge&quot;&gt;runningTotal&lt;/code&gt;保存了下来。
+&lt;code class=&quot;highlighter-rouge&quot;&gt;let ince = ...&lt;/code&gt;定义了一个叫做&lt;code class=&quot;highlighter-rouge&quot;&gt;ince&lt;/code&gt;的常量，该常量指向一个每次调用会加3的&lt;code class=&quot;highlighter-rouge&quot;&gt;incrementro&lt;/code&gt;函数，这就是一个关键的地方。&lt;/p&gt;
+
+&lt;p&gt;让我们来继续：&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;sr&quot;&gt;//&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;如果创建了另一个incrementor，其会有一个属于自己的独立的runningTotal变量的引用。 下面的例子中，inceNew捕获了一个新的runningTotal变量，该变量和incrementByTen中捕获的变量没有任何联系：&quot;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;let&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;inceNew&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;makeIncrementor&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;forIncrement: &lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;10&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;inceNew&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt;	&lt;span class=&quot;o&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;sr&quot;&gt;/ 10
+ince()	/&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;/&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;15&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;又加了一次&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;PS:&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;* 如果将闭包赋值给一个类实例的属性，并且该闭包通过指向该实例或其成员来捕获了该实例，那么将会创建一个在闭包和实例间的强引用环。
+* Swift 使用捕获列表来打破这种强引用环。更多信息，请参考 [闭包引起的循环强引用](http://www.yiibai.com/swift/strong_reference_cycles_for_closures.html)。
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;那么问题来了，不是说好的 &lt;code class=&quot;highlighter-rouge&quot;&gt;ince()&lt;/code&gt; 和 &lt;code class=&quot;highlighter-rouge&quot;&gt;inceNew()&lt;/code&gt;是&lt;code class=&quot;highlighter-rouge&quot;&gt;let&lt;/code&gt;出来的常量么，怎么还能一直改变值呢？很简单，因为函数(func)和闭包(closures)都是 &lt;strong&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;引用类型&lt;/code&gt;&lt;/strong&gt; 。&lt;/p&gt;
+
+&lt;p&gt;当你指定一个函数或一个闭包常量/变量时，实际上是在设置该常量或变量是否为一个引用函数。在上面的例子中，ince是个闭包，ince指向的是恒定的，而不是封闭件本身的内容是恒定的。这也意味着，如果你分配一个封闭两种不同的常量或变量，这两个常量或变量将引用同一个闭包：&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;let&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;anotherInce&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ince&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;anotherInce&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;()&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;sr&quot;&gt;/ 18
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h2 id=&quot;nonescaping-closuresswiftblock&quot;&gt;非逃逸闭包(Nonescaping Closures)和swift中的block&lt;/h2&gt;
+
+&lt;p&gt;等了这么久，也终于说到这个地方了。学闭包为了啥，反正我当时就是为了可以写一个block。。。可是swift中并没有OC中的block。没关系，我们可以用闭包来实现block相同的功能。&lt;/p&gt;
+
+&lt;p&gt;首先，要解释一下逃逸和非逃逸的闭包与block有啥关系。&lt;/p&gt;
+
+&lt;p&gt;一个闭包作为参数传到一个函数中，但是这个闭包在函数返回之后才被执行，我们称该闭包从函数中逃逸。可以在参数名之前标注&lt;code class=&quot;highlighter-rouge&quot;&gt;@noescape&lt;/code&gt;，用来指明这个闭包是不允许“逃逸”出这个函数的。将闭包标注&lt;code class=&quot;highlighter-rouge&quot;&gt;@noescape&lt;/code&gt;能使编译器知道这个闭包的生命周期.&lt;/p&gt;
+
+&lt;p&gt;像数组中有提供的一个sort方法，函数中的参数就定义成了非逃逸闭包。&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kp&quot;&gt;public&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;func&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;sort&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;vi&quot;&gt;@noescape&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;isOrderedBefore: &lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Self&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Generator&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Element&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Self&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Generator&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Element&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Bool&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Self&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Generator&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Element&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;非逃逸的闭包目前在我的经验中用的比较少，更多的时候是用逃逸闭包。举个例子：很多启动异步操作的函数接受一个闭包参数作为 &lt;code class=&quot;highlighter-rouge&quot;&gt;completion handler&lt;/code&gt;。这类函数会在异步操作开始之后立刻返回，但是闭包直到异步操作结束后才会被调用。在这种情况下，闭包需要“逃逸”出函数，因为闭包需要在函数返回之后被调用。&lt;/p&gt;
+
+&lt;p&gt;这里说明，非逃逸闭包和逃逸闭包讲的不是执行先后顺序。非逃逸是指你的闭包不能在函数外单独调用,只能在函数内部调用,函数调用完成后,那个闭包也就结束了。&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;var&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;completionHandler&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{(&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;finished: &lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Bool&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Void&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;in&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;func&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;testDoSomething&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;finishedClosure: &lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Bool&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;-&amp;gt;&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;Void&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;sr&quot;&gt;//&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;进行一些操作，确认完成后，然后调用传入的闭包参数，并给闭包传参&quot;&lt;/span&gt;
+    &lt;span class=&quot;n&quot;&gt;finishedClosure&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kp&quot;&gt;true&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;sr&quot;&gt;//&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;调用函数&quot;&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;testDoSomething&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;done&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;in&lt;/span&gt;
+	&lt;span class=&quot;sr&quot;&gt;//&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;实现completionHandler&quot;&lt;/span&gt;
+    &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;done&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+        &lt;span class=&quot;nb&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s2&quot;&gt;&quot;task is done&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h2 id=&quot;section-8&quot;&gt;未完待续，持续更新中&lt;/h2&gt;
+
+</content>
+<category term="Swift" />
+<summary>这里有swift闭包的用法和探寻</summary>
+</entry>
+<entry>
+<title>前端学习笔记 – 基础</title>
+<link href="https://LSnail.github.io/web-basic-one/" rel="alternate" type="text/html" title="前端学习笔记 -- 基础" />
+<published>2016-06-08T00:00:00+08:00</published>
+<updated>2016-06-08T00:00:00+08:00</updated>
+<id>https://LSnail.github.io/web basic one</id>
+<content type="html" xml:base="https://LSnail.github.io/web-basic-one/">&lt;h3 id=&quot;section&quot;&gt;前端的三大结构&lt;/h3&gt;
+
+&lt;p&gt;&lt;strong&gt;HTML/HTML5  +  CSS/CSS3  +  JavaScript&lt;/strong&gt;&lt;/p&gt;
+
+&lt;p&gt;注：&lt;/p&gt;
+
+&lt;ul class=&quot;notice&quot;&gt;
+  &lt;li&gt;HTML5是在HTML基础上新增了很多的API，实现了更多的功能，以求尽可能的脱离第三方的插件来实现更好的通用性和兼容性，本质上还是HTML。&lt;/li&gt;
+  &lt;li&gt;CSS本质上是一个选择器，通过选择器来实现指定的dom元素，使得内容和样式可以分离。它可以理解为一个美化工具。&lt;/li&gt;
+  &lt;li&gt;JavaScript的作用则是实现交互事件、动画和逻辑处理的主要部分。它是一个网页真正工作起来的重要保证。（jquery, angularJS, requireJS, underscore, d3, lodash 框架等)&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;这里有一个快速入门且介绍详细的学习网站：&lt;a href=&quot;http://www.w3school.com.cn/&quot;&gt;http://www.w3school.com.cn/&lt;/a&gt;&lt;/p&gt;
+
+&lt;h3 id=&quot;sassless&quot;&gt;关于SASS和LESS&lt;/h3&gt;
+
+&lt;p&gt;这两者都是CSS文件的预处理文件，可以在它们中定义变量和方法，用一种编程式的方法来预处理CSS文件。
+SASS是用ruby语言实现的，使用前需要配置ruby环境。它最后的文件是’.scss’格式的。
+而LESS是用JavaScript实现的，但是由于维护者较少，所以不是很常见。它的文件是’.less’格式的。&lt;/p&gt;
+
+&lt;h3 id=&quot;angular&quot;&gt;关于angular&lt;/h3&gt;
+&lt;p&gt;angular思想：MVW – Model, View, Whatever
+使用脚手架工具来生成一个angular工程：&lt;a href=&quot;http://yeoman.io&quot;&gt;YEOMAN&lt;/a&gt;&lt;/p&gt;
+
+</content>
+<category term="WEB" />
+</entry>
+<entry>
+<title>CocoaPods报错：The dependency is not used in any concrete target</title>
+<link href="https://LSnail.github.io/cocoa-pod-error/" rel="alternate" type="text/html" title="CocoaPods报错：The dependency is not used in any concrete target" />
+<published>2016-03-04T00:00:00+08:00</published>
+<updated>2016-03-04T00:00:00+08:00</updated>
+<id>https://LSnail.github.io/cocoa pod error</id>
+<content type="html" xml:base="https://LSnail.github.io/cocoa-pod-error/">&lt;p&gt;podfile升级之后到最新版本，pod里的内容必须明确指出所用第三方库的target，否则会出现The dependency `` is not used in any concrete target这样的错误。&lt;/p&gt;
+
+&lt;p&gt;以下从三个步骤陈述：&lt;/p&gt;
+
+&lt;h3 id=&quot;podfile&quot;&gt;1. Podfile升级&lt;/h3&gt;
+
+&lt;p&gt;查看pod版本：&lt;/p&gt;
+
+&lt;p&gt;pod –version&lt;/p&gt;
+
+&lt;p&gt;pod 升级（此时是升级到1.0.0.beta.2版本）：&lt;/p&gt;
+
+&lt;p&gt;sudo gem install cocoapods –pre&lt;/p&gt;
+
+&lt;h3 id=&quot;section&quot;&gt;2. 错误内容：&lt;/h3&gt;
+
+&lt;p&gt;我的Podfile的内容是：&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;platform&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:ios&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;‘&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;7&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;‘&lt;/span&gt;
+
+&lt;span class=&quot;n&quot;&gt;pod&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;‘&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;ReactiveCocoa&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;‘&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;‘&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;8&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;‘&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;pod&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;‘&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;objectiveflickr&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;‘&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;‘&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;4&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;‘&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;pod&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;‘&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;LinqToObjectiveC&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;‘&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;‘&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;‘&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;pod&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;‘&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;SDWebImage&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;‘&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;‘&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;3&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;6&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;‘&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;pod install后出现错误The dependency `` is not used in any concrete target&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;pod&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;install&lt;/span&gt;
+&lt;span class=&quot;sr&quot;&gt;/System/&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Library&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Frameworks&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Ruby&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;framework&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Versions&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;usr&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;lib&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ruby&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;universal&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;darwin14&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;rbconfig&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;rb&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;213&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;warning: &lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Insecure&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;world&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;writable&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;dir&lt;/span&gt; &lt;span class=&quot;sr&quot;&gt;/Applications/&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;Cocos&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;tools&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ant&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;/&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;bin&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;in&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;PATH&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;mode&lt;/span&gt; &lt;span class=&quot;mo&quot;&gt;040777&lt;/span&gt;
+&lt;span class=&quot;no&quot;&gt;Re&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;creating&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;CocoaPods&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;due&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;to&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;major&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;version&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;update&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;
+&lt;span class=&quot;no&quot;&gt;Updating&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;local&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;specs&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;repositories&lt;/span&gt;
+&lt;span class=&quot;no&quot;&gt;Analyzing&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;dependencies&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;!&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;no&quot;&gt;The&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;dependency&lt;/span&gt; &lt;span class=&quot;sb&quot;&gt;`ReactiveCocoa (= 2.1.8)`&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;is&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;not&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;used&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;in&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;any&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;concrete&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;target&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;
+&lt;span class=&quot;no&quot;&gt;The&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;dependency&lt;/span&gt; &lt;span class=&quot;sb&quot;&gt;`objectiveflickr (= 2.0.4)`&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;is&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;not&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;used&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;in&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;any&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;concrete&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;target&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;
+&lt;span class=&quot;no&quot;&gt;The&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;dependency&lt;/span&gt; &lt;span class=&quot;sb&quot;&gt;`LinqToObjectiveC (= 2.0.0)`&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;is&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;not&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;used&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;in&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;any&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;concrete&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;target&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;
+&lt;span class=&quot;no&quot;&gt;The&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;dependency&lt;/span&gt; &lt;span class=&quot;sb&quot;&gt;`SDWebImage (= 3.6)`&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;is&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;not&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;used&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;in&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;any&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;concrete&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;target&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;h3 id=&quot;section-1&quot;&gt;3. 修改方法：&lt;/h3&gt;
+
+&lt;p&gt;Podfile内容更改：&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;platform&lt;/span&gt; &lt;span class=&quot;ss&quot;&gt;:ios&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;‘&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;7&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;‘&lt;/span&gt;
+
+&lt;span class=&quot;n&quot;&gt;target&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;RWTFlickrSearch&quot;&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;do&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;pod&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;‘&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;ReactiveCocoa&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;‘&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;‘&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;1&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;8&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;‘&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;pod&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;‘&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;objectiveflickr&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;‘&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;‘&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;4&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;‘&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;pod&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;‘&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;LinqToObjectiveC&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;‘&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;‘&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;2&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;0&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;‘&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;pod&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;‘&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;SDWebImage&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;‘&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;err&quot;&gt;‘&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;3&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;mi&quot;&gt;6&lt;/span&gt;&lt;span class=&quot;err&quot;&gt;‘&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;end&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;这样再运行pod install，就会成功了。&lt;/p&gt;
+
+</content>
+<category term="iOS基础" />
+<summary>podfile升级之后到最新版本，pod里的内容必须明确指出所用第三方库的target，否则会出现 The dependency is not used in any concrete target 这样的错误。</summary>
+</entry>
+<entry>
+<title>开始Swift之路</title>
+<link href="https://LSnail.github.io/Start-Switft/" rel="alternate" type="text/html" title="开始Swift之路" />
+<published>2015-10-01T17:30:00+08:00</published>
+<updated>2015-10-01T17:30:00+08:00</updated>
+<id>https://LSnail.github.io/Start-Switft</id>
+<content type="html" xml:base="https://LSnail.github.io/Start-Switft/">&lt;h2 id=&quot;section&quot;&gt;从今天开始&lt;/h2&gt;
+
+&lt;h2 id=&quot;swift&quot;&gt;做一个会Swift的人&lt;/h2&gt;
+
+&lt;h2 id=&quot;section-1&quot;&gt;面朝大海&lt;/h2&gt;
+
+&lt;h2 id=&quot;section-2&quot;&gt;春暖花开&lt;/h2&gt;
+</content>
+<category term="随笔" />
+<summary>从今天开始</summary>
+</entry>
+<entry>
+<title>iOS的后台程序</title>
+<link href="https://LSnail.github.io/ios-fake-background-task/" rel="alternate" type="text/html" title="iOS的后台程序" />
+<published>2015-09-29T05:01:14+08:00</published>
+<updated>2015-09-29T05:01:14+08:00</updated>
+<id>https://LSnail.github.io/ios-fake-background-task</id>
+<content type="html" xml:base="https://LSnail.github.io/ios-fake-background-task/">&lt;h3 id=&quot;ios&quot;&gt;一、IOS的“伪后台”程序&lt;/h3&gt;
+
+&lt;p&gt;首先，先了解一下iOS 中所谓的「后台进程」到底是怎么回事吧？&lt;/p&gt;
+
+&lt;p&gt;Let me be as clear as I can be: the iOS multitasking bar does not contain “a list of all running apps”. It contains “a list of recently used apps”. The user never has to manage background tasks on iOS.&lt;/p&gt;
+
+&lt;p&gt;首先我们得搞清楚的是，iOS 中所谓的「后台驻留」并不是指「执行中的程序」，而是「最近使用过的程序」，也可以瞧瞧Apple 的知识库文章怎么写的：&lt;/p&gt;
+
+&lt;p&gt;按两下主画面按钮后，显示的是「最近用过的应用程序」，所以别把它想成Mac OS X 中的Command + Tab 键所显示的切换程序列；你可以试试看将iPhone 关机再开机，然后按两下Home 键，应该会发现先前那些程式还是出现在那里，因为它其实是你最近使用过的程序使用记录，或像是浏览器中的浏览记录)。&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;如果你一个一个去清除 &quot;后台驻留&quot; 的程序，就像是一笔一笔删除浏览记录中的项目一样，是没有太大意义的(除非你不想让其他人看到你曾经用过什么程式，或者想杀时间、太无聊了)，也不会对电力或记忆体有什么帮助。
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;iOS 的多任务处理其实是很聪明的，系统会自动中止在背景执行的程序，在有需要时，也会将被中止的程式suspended（注:”中止的程式”不是指关闭程序，而是指由前台转向后台的程序，程序在后台并不真正运行，不要和关闭程序混淆了) 从内存中移除。因此，iOS 装置的使用者根本就不需要担心怎么管理这些执行中或不在执行中的程序，尽管放心用、轻松玩就是了！&lt;/p&gt;
+
+&lt;p&gt;一般说来，所有程式进入背景后都还有&lt;code class=&quot;highlighter-rouge&quot;&gt;5秒&lt;/code&gt;的执行缓冲时间，有些程序可以要求延长到&lt;code class=&quot;highlighter-rouge&quot;&gt;10分钟&lt;/code&gt;(这些当然是由开发人员在设计与提交程式时决定和声明)；&lt;/p&gt;
+
+&lt;p&gt;因此，在你按下Home 键后，本来的程式就会退到背景，如果它有额外的背景执行作业，超过10 分钟还是会被iOS 中止；所以，还是别担心了！&lt;/p&gt;
+
+&lt;p&gt;但是，也有例外情况，某些特殊类型的程式是被容许在背景中持续执行的，像是会持续在背景播放音乐的程序、GPS 程序、VOIP 程序、Newsstand 以及周边配件附属的程序，不过只要这些程序不再执行动作，就会变成中止的程式，像是音乐拨完了、杂志下载完了… 因此，使用者其实也没必要太过留意这些程序。&lt;/p&gt;
+
+&lt;p&gt;you do not have to manage background tasks on iOS. The 　　system handles almost every case for you and well written audio, GPS, VOIP, Newsstand and accessory apps will handle the rest.&lt;/p&gt;
+
+&lt;h3 id=&quot;ios-1&quot;&gt;二、IOS的“多任务”发展史&lt;/h3&gt;
+
+&lt;p&gt;自从出现了操作系统以来，就没有过所谓真正的“多任务”。所谓多任务，无非是CPU速度够快而足以支撑极短时间内在多个进程内动作罢了。而所谓的“单任务”，无非是只能让当前任务独享资源罢了。&lt;/p&gt;
+
+&lt;p&gt;简单来说，IOS 4 APP类型可以分为三种：&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;保存现场&lt;/code&gt;
+即：按下Home键10秒内直接杀死进程，并释放内存。一般说来，所有程序进入背景后都还有5 秒的执行缓冲时间，有些程序可以要求延长到10 分钟(这些当然是由开发人员在设计与提交程式时决定和声明)；因此，在你按下Home 键后，本来的程式就会退到背景，如果它有额外的背景执行作业，超过10 分钟还是会被iOS 中止。&lt;/li&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;iOS支持的“多任务”&lt;/code&gt;
+即：按下Home键转入多任务状态，保留在内存中，但只能系统允许的动作：比如GPS，比如VoIP，比如Streaming Music等等。&lt;/li&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;真正的桌面级别的多任务&lt;/code&gt;
+即：只有Safari/Mail才是真正的多任务，苹果嫡系大都都不是。这个级别的app在后台是没有任何限制动作。（对于无限制动作的程序，一是会在用户无察觉的情况下耗光电力，二是会有安全上面的问题)。&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;注意：对于上述三种级别，后两种会占用内存的APP，也会在任意时间从内存中被砍掉，取决于你是否动用了其它app而导致内存不足。真正不会被砍掉的后台，只有苹果那个通知系统。&lt;/p&gt;
+
+&lt;p&gt;其实可以回顾一下iOS是怎么一步步引入现在这个机制的：&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;刚出生，什么都没有，单纯的单任务。&lt;/li&gt;
+  &lt;li&gt;iPhone OS 3.0，引入通知架构。几乎当年全部机型可用；Android晚了一年，2.2才有此功能，到这个时候相信才有90%上下机器用上。&lt;/li&gt;
+  &lt;li&gt;iOS 4.0+，引入有限制的后台多任务。&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;搞这么复杂干嘛？直接像Android一出生那样所有app一个小虚拟机，无任何限制动作，让根本没有内存管理经验和资源消耗概念的全世界最大民工群Java程序员们写的app任意地跑着吧！&lt;/p&gt;
+
+&lt;p&gt;答案只有两个：电力，安全。安全不说，如何在保持多任务优势的同时，避免消耗过多电力，苹果花了很多心思；而不是像webOS/Android一样，简单粗暴桌面级的多任务。iPhone 4甚至在硬件上面也下了苦功，利用3D层叠技术组装A4芯片，内部元件高度集成，并把天线移至体表，增加内部电池空间。&lt;/p&gt;
+
+&lt;p&gt;其实至iPhone OS 3，已经足够应付大部分应用了。用户根本无从知道app的实际运行状态，保存现场让app看起来不像是刚打开一样，通知系统又可以在后台默默推送消息。事实上，当前95% iOS APP依旧只有“保存现场 + 通知系统”这样的组合，比如很多twitter客户端，大部分人根本不会注意到它不是真正意义上的“多任务”。很震撼的事实，但确实95%的应用场景根本不需要所谓真正的“多任务”。&lt;/p&gt;
+
+&lt;p&gt;但是时代在变。真正需要多任务的东西出现了：电台要stream，IM要stream，GPS要stream，多任务必须提上日程。iOS 4加进了，WP7刚刚加进了，Android/webOS打一出生就有。从本质来说，iOS/WP7/Android/webOS跑在内存中的后台程序，唯一的区别就是，iOS/WP7限制了它可以做的事(这就是为什么它们一出生都没有多任务的原因，这个架构很复杂，不是几百行中文字可以说明白的)，而Android/webOS没有；从技术上面来说，iOS/WP7/webOS三者架构相当，Android独立门户。
+于是很可笑，有无限制，成了真“多任务”和伪“多任务”的区别；而后者架构更复杂，&lt;/p&gt;
+
+&lt;p&gt;可以套用一句“吃力不讨好”。&lt;/p&gt;
+
+&lt;p&gt;为什么要做吃力不讨好的事？答案依旧在上面，电力和安全。当然你可以说iPhone电力也没好到哪里去，安全也就一般般嘛。暂且抛掉这两样不谈，实际看看iOS有限制后台app，和Android完全无限制后台app有什么不同：&lt;/p&gt;
+
+&lt;p&gt;相信我，最终你会发现iOS上最令人诟病的app，是那些不支持标准协议的软件平台商们，比如腾讯。因为iOS后台允许的动作，已经覆盖了全部大大小小的通信开源协议。&lt;/p&gt;
+</content>
+<category term="iOS基础" />
+<summary>一、IOS的“伪后台”程序</summary>
+</entry>
+<entry>
+<title>[转载]iOS 7系列译文：认识 TextKit</title>
+<link href="https://LSnail.github.io/TextKit/" rel="alternate" type="text/html" title="[转载]iOS 7系列译文：认识 TextKit" />
+<published>2015-09-25T04:30:17+08:00</published>
+<updated>2015-09-25T04:30:17+08:00</updated>
+<id>https://LSnail.github.io/TextKit</id>
+<content type="html" xml:base="https://LSnail.github.io/TextKit/">&lt;p&gt;不得不说，这是我见过的写的最好的一篇有关TextKit的译文了，代码也很清晰，文字简单明了，推荐大家看看。
+以下是链接，对富文本代码的编写会非常有帮助&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&quot;http://www.cocoachina.com/industry/20131126/7417.html&quot;&gt;iOS 7系列译文：认识 TextKit&lt;/a&gt;&lt;/p&gt;
+</content>
+<category term="分享" />
+<summary>不得不说，这是我见过的写的最好的一篇有关TextKit的译文了，代码也很清晰，文字简单明了，推荐大家看看。以下是链接，对富文本代码的编写会非常有帮助</summary>
+</entry>
+<entry>
+<title>简单的正则表达式</title>
+<link href="https://LSnail.github.io/Regular-Expression/" rel="alternate" type="text/html" title="简单的正则表达式" />
+<published>2015-09-12T08:14:31+08:00</published>
+<updated>2015-09-12T08:14:31+08:00</updated>
+<id>https://LSnail.github.io/Regular Expression</id>
+<content type="html" xml:base="https://LSnail.github.io/Regular-Expression/">&lt;h1 id=&quot;section&quot;&gt;1. 什么是正则表达式&lt;/h1&gt;
+
+&lt;p&gt;正则表达式，又称正规表示法、常规表示法（英语：Regular Expression，在代码中常简写为regex、regexp或RE），计算机科学的一个概念。正则表达式使用单个字符串来描述、匹配一系列符合某个句法规则的字符串。在很多文本编辑器里，正则表达式通常被用来检索、替换那些符合某个模式的文本。&lt;/p&gt;
+
+&lt;p&gt;简单来说，当你需要检索一些比较有“特点”的字符串，或者想要对它做点什么，用普通的字符串处理方式又太过繁杂的时候，你就该考虑下使用正则表达式了。&lt;/p&gt;
+
+&lt;h1 id=&quot;section-1&quot;&gt;2. 应该注意什么&lt;/h1&gt;
+
+&lt;p&gt;别被那些复杂的表达式吓倒，只要从最简单的开始一步一步来，你会发现正则表达式其实并没有想像中的那么困难。当然，如果你真的耐下心来看完这篇文章了，能把提到过的语法记住80%以上的可能性为零。这里只是一些基本的原理，需要多多的联系。不过把它当做一个参考资料以便日后查阅，貌似也是一个不错的选择？
+Let’s get started!&lt;/p&gt;
+
+&lt;p&gt;学习正则表达式的最好方法是从例子开始，理解例子之后再自己对例子进行修改，实验。下面给出了不少简单的例子，并对它们作了说明。&lt;/p&gt;
+
+&lt;p&gt;假设你在一篇英文小说里查找hi，你可以使用正则表达式hi。&lt;/p&gt;
+
+&lt;p&gt;这几乎是最简单的正则表达式了，它可以精确匹配这样的字符串：由两个字符组成，前一个字符是h,后一个是i。通常，处理正则表达式的工具会提供一个忽略大小写的选项，如果选中了这个选项，它可以匹配hi,HI,Hi,hI这四种情况中的任意一种。&lt;/p&gt;
+
+&lt;p&gt;不幸的是，很多单词里包含hi这两个连续的字符，比如him,history,high等等。用hi来查找的话，这里边的hi也会被找出来。如果要精确地查找hi这个单词的话，我们应该使用\bhi\b。&lt;/p&gt;
+
+&lt;p&gt;\b是正则表达式规定的一个特殊代码（好吧，某些人叫它元字符，metacharacter），代表着单词的开头或结尾，也就是单词的分界处。虽然通常英文的单词是由空格，标点符号或者换行来分隔的，但是\b并不匹配这些单词分隔字符中的任何一个，它只匹配一个位置。&lt;/p&gt;
+
+&lt;p&gt;如果需要更精确的说法，\b匹配这样的位置：它的前一个字符和后一个字符不全是(一个是,一个不是或不存在)\w。&lt;/p&gt;
+
+&lt;p&gt;假如你要找的是hi后面不远处跟着一个Lucy，你应该用\bhi\b.&lt;em&gt;\bLucy\b。
+这里，.是另一个元字符，匹配除了换行符以外的任意字符。&lt;/em&gt;同样是元字符，不过它代表的不是字符，也不是位置，而是数量——它指定&lt;em&gt;前边的内容可以连续重复使用任意次以使整个表达式得到匹配。因此，.&lt;/em&gt;连在一起就意味着任意数量的不包含换行的字符。现在\bhi\b.*\bLucy\b的意思就很明显了：先是一个单词hi,然后是任意个任意字符(但不能是换行)，最后是Lucy这个单词。&lt;/p&gt;
+
+&lt;p&gt;换行符就是’\n’,ASCII编码为10(十六进制0x0A)的字符。&lt;/p&gt;
+
+&lt;p&gt;如果同时使用其它元字符，我们就能构造出功能更强大的正则表达式。比如下面这个例子：&lt;/p&gt;
+
+&lt;p&gt;0\d\d-\d\d\d\d\d\d\d\d匹配这样的字符串：以0开头，然后是两个数字，然后是一个连字号“-”，最后是8个数字(也就是中国的电话号码。当然，这个例子只能匹配区号为3位的情形)。&lt;/p&gt;
+
+&lt;p&gt;这里的\d是个新的元字符，匹配一位数字(0，或1，或2，或……)。-不是元字符，只匹配它本身——连字符(或者减号，或者中横线，或者随你怎么称呼它)。&lt;/p&gt;
+
+&lt;p&gt;为了避免那么多烦人的重复，我们也可以这样写这个表达式：0\d{2}-\d{8}。这里\d后面的{2}({8})的意思是前面\d必须连续重复匹配2次(8次)。&lt;/p&gt;
+
+&lt;h1 id=&quot;section-2&quot;&gt;3. 常用的正则表达式&lt;/h1&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;^/d+$　　//匹配非负整数 (正整数+0)&lt;/li&gt;
+  &lt;li&gt;^[0-9]&lt;em&gt;[1-9][0-9]&lt;/em&gt;$　　//匹配正整数&lt;/li&gt;
+  &lt;li&gt;
+    &lt;table&gt;
+      &lt;tbody&gt;
+        &lt;tr&gt;
+          &lt;td&gt;^((-/d+)&lt;/td&gt;
+          &lt;td&gt;(0+))$　　//匹配非正整数（负整数 + 0）&lt;/td&gt;
+        &lt;/tr&gt;
+      &lt;/tbody&gt;
+    &lt;/table&gt;
+  &lt;/li&gt;
+  &lt;li&gt;^-[0-9]&lt;em&gt;[1-9][0-9]&lt;/em&gt;$　　//匹配负整数&lt;/li&gt;
+  &lt;li&gt;^-?/d+$　　　　//匹配整数&lt;/li&gt;
+  &lt;li&gt;^/d+(/./d+)?$　　//匹配非负浮点数（正浮点数 + 0）&lt;/li&gt;
+  &lt;li&gt;
+    &lt;table&gt;
+      &lt;tbody&gt;
+        &lt;tr&gt;
+          &lt;td&gt;^(([0-9]+/.[0-9]&lt;em&gt;[1-9][0-9]&lt;/em&gt;)&lt;/td&gt;
+          &lt;td&gt;([0-9]&lt;em&gt;[1-9][0-9]&lt;/em&gt;/.[0-9]+)&lt;/td&gt;
+          &lt;td&gt;([0-9]&lt;em&gt;[1-9][0-9]&lt;/em&gt;))$　　//匹配正浮点数&lt;/td&gt;
+        &lt;/tr&gt;
+      &lt;/tbody&gt;
+    &lt;/table&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;table&gt;
+      &lt;tbody&gt;
+        &lt;tr&gt;
+          &lt;td&gt;^((-/d+(/./d+)?)&lt;/td&gt;
+          &lt;td&gt;(0+(/.0+)?))$　　//匹配非正浮点数（负浮点数 + 0）&lt;/td&gt;
+        &lt;/tr&gt;
+      &lt;/tbody&gt;
+    &lt;/table&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;table&gt;
+      &lt;tbody&gt;
+        &lt;tr&gt;
+          &lt;td&gt;^(-(([0-9]+/.[0-9]&lt;em&gt;[1-9][0-9]&lt;/em&gt;)&lt;/td&gt;
+          &lt;td&gt;([0-9]&lt;em&gt;[1-9][0-9]&lt;/em&gt;/.[0-9]+)&lt;/td&gt;
+          &lt;td&gt;([0-9]&lt;em&gt;[1-9][0-9]&lt;/em&gt;)))$　　//匹配负浮点数&lt;/td&gt;
+        &lt;/tr&gt;
+      &lt;/tbody&gt;
+    &lt;/table&gt;
+  &lt;/li&gt;
+  &lt;li&gt;^(-?/d+)(/./d+)?$　　//匹配浮点数&lt;/li&gt;
+  &lt;li&gt;^[A-Za-z]+$　　//匹配由26个英文字母组成的字符串&lt;/li&gt;
+  &lt;li&gt;^[A-Z]+$　　//匹配由26个英文字母的大写组成的字符串&lt;/li&gt;
+  &lt;li&gt;^[a-z]+$　　//匹配由26个英文字母的小写组成的字符串
+  14.^[A-Za-z0-9]+$　　//匹配由数字和26个英文字母组成的字符串&lt;/li&gt;
+  &lt;li&gt;^/w+$　　//匹配由数字、26个英文字母或者下划线组成的字符串&lt;/li&gt;
+  &lt;li&gt;^[/w-]+(/.[/w-]+)*@[/w-]+(/.[/w-]+)+$　　　　//匹配email地址&lt;/li&gt;
+  &lt;li&gt;^[a-zA-z]+://匹配(/w+(-/w+)&lt;em&gt;)(/.(/w+(-/w+)&lt;/em&gt;))&lt;em&gt;(/?/S&lt;/em&gt;)?$　　//匹配url&lt;/li&gt;
+  &lt;li&gt;匹配中文字符的正则表达式： [/u4e00-/u9fa5]&lt;/li&gt;
+  &lt;li&gt;匹配双字节字符(包括汉字在内)：[^/x00-/xff]&lt;/li&gt;
+  &lt;li&gt;应用：计算字符串的长度（一个双字节字符长度计2，ASCII字符计1）String.prototype.len=function(){return this.replace([^/x00-/xff]/g,”aa”).length;}&lt;/li&gt;
+  &lt;li&gt;
+    &lt;table&gt;
+      &lt;tbody&gt;
+        &lt;tr&gt;
+          &lt;td&gt;匹配空行的正则表达式：/n[/s&lt;/td&gt;
+          &lt;td&gt;]*/r&lt;/td&gt;
+        &lt;/tr&gt;
+      &lt;/tbody&gt;
+    &lt;/table&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;table&gt;
+      &lt;tbody&gt;
+        &lt;tr&gt;
+          &lt;td&gt;匹配HTML标记的正则表达式：/&amp;lt;(.&lt;em&gt;)&amp;gt;.&lt;/em&gt;&amp;lt;///1&amp;gt;&lt;/td&gt;
+          &lt;td&gt;&amp;lt;(.*) //&amp;gt;/&lt;/td&gt;
+        &lt;/tr&gt;
+      &lt;/tbody&gt;
+    &lt;/table&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;table&gt;
+      &lt;tbody&gt;
+        &lt;tr&gt;
+          &lt;td&gt;匹配首尾空格的正则表达式：(^/s*)&lt;/td&gt;
+          &lt;td&gt;(/s*$)&lt;/td&gt;
+        &lt;/tr&gt;
+      &lt;/tbody&gt;
+    &lt;/table&gt;
+  &lt;/li&gt;
+  &lt;li&gt;^/S+[a-z A-Z]$ 不能为空 不能有空格  只能是英文字母&lt;/li&gt;
+  &lt;li&gt;/S{6,}         不能为空 六位以上&lt;/li&gt;
+  &lt;li&gt;^/d+$          不能有空格 不能非数字&lt;/li&gt;
+  &lt;li&gt;
+    &lt;table&gt;
+      &lt;tbody&gt;
+        &lt;tr&gt;
+          &lt;td&gt;(.*)(/.jpg&lt;/td&gt;
+          &lt;td&gt;/.bmp)$ 只能是jpg和bmp格式&lt;/td&gt;
+        &lt;/tr&gt;
+      &lt;/tbody&gt;
+    &lt;/table&gt;
+  &lt;/li&gt;
+  &lt;li&gt;^/d{4}/-/d{1,2}-/d{1,2}$ 只能是2004-10-22格式&lt;/li&gt;
+  &lt;li&gt;^0$            至少选一项&lt;/li&gt;
+  &lt;li&gt;^0{2,}$        至少选两项&lt;/li&gt;
+  &lt;li&gt;
+    &lt;table&gt;
+      &lt;tbody&gt;
+        &lt;tr&gt;
+          &lt;td&gt;^[/s&lt;/td&gt;
+          &lt;td&gt;/S]{20,}$ 不能为空 二十字以上&lt;/td&gt;
+        &lt;/tr&gt;
+      &lt;/tbody&gt;
+    &lt;/table&gt;
+  &lt;/li&gt;
+  &lt;li&gt;
+    &lt;table&gt;
+      &lt;tbody&gt;
+        &lt;tr&gt;
+          &lt;td&gt;^/+?[a-z0-9](([-+.]&lt;/td&gt;
+          &lt;td&gt;[_]+)?[a-z0-9]+)*@([a-z0-9]+(/.&lt;/td&gt;
+          &lt;td&gt;/-))+[a-z]{2,6}$邮件&lt;/td&gt;
+        &lt;/tr&gt;
+      &lt;/tbody&gt;
+    &lt;/table&gt;
+  &lt;/li&gt;
+  &lt;li&gt;/w+([-+.]/w+)&lt;em&gt;@/w+([-.]/w+)&lt;/em&gt;/./w+([-.]/w+)&lt;em&gt;([,;]/s&lt;/em&gt;/w+([-+.]/w+)&lt;em&gt;@/w+([-.]/w+)&lt;/em&gt;/./w+([-.]/w+)&lt;em&gt;)&lt;/em&gt; 输入多个地址用逗号或空格分隔邮件&lt;/li&gt;
+  &lt;li&gt;^(/([0-9]+/))?[0-9]{7,8}$电话号码7位或8位或前面有区号例如（022）87341628&lt;/li&gt;
+  &lt;li&gt;^[a-z A-Z 0-9 _]+@[a-z A-Z 0-9 _]+(/.[a-z A-Z 0-9 _]+)+(/,[a-z A-Z 0-9 _]+@[a-z A-Z 0-9 _]+(/.[a-z A-Z 0-9 _]+)+)*$;只能是字母、数字、下划线；必须有@和.同时格式要规范 邮件&lt;/li&gt;
+  &lt;li&gt;^/w+@/w+(/./w+)+(/,/w+@/w+(/./w+)+)*$上面表达式也可以写成这样子，更精练&lt;/li&gt;
+  &lt;li&gt;
+    &lt;table&gt;
+      &lt;tbody&gt;
+        &lt;tr&gt;
+          &lt;td&gt;^/w+((-/w+)&lt;/td&gt;
+          &lt;td&gt;(/./w+))*/@/w+((/.&lt;/td&gt;
+          &lt;td&gt;-)/w+)*/./w+$&lt;/td&gt;
+        &lt;/tr&gt;
+      &lt;/tbody&gt;
+    &lt;/table&gt;
+  &lt;/li&gt;
+  &lt;li&gt;final String CONDITION = “(?=.&lt;em&gt;[a-z])(?=.&lt;/em&gt;[A-Z])(?=.*//d)”;限定条件&lt;/li&gt;
+  &lt;li&gt;final String SPECIAL_CHAR = “[-A-Za-z0-9!$%&amp;amp;()/;&amp;lt;?{}//[//]^////]”;允许出现的字符&lt;/li&gt;
+  &lt;li&gt;final String QUANTITY = “{8,16}”;数量&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h1 id=&quot;section-3&quot;&gt;4. 几个常用符号&lt;/h1&gt;
+
+&lt;p&gt;(?=.&lt;em&gt;[a-z]) 表示当前位置后面必须出现 .&lt;/em&gt;[a-z] 的字符，这个可以理解为必须出现小写字母。或者可以理解为某一个字符间的缝隙必须满足的条件，这个仅仅作为条件判断并不能匹配任何字符，因为这属于非捕获组中的环视（lookarround）零宽度匹配。&lt;/p&gt;
+
+&lt;p&gt;举个大家常见的例子：&lt;/p&gt;
+
+&lt;p&gt;表达式：Win(?=XP)
+现有字符串 WinXP 和 WinNT，在应用这个表达式时前者能与之进行匹配，为什么呢？&lt;/p&gt;
+
+&lt;p&gt;当匹配器指示到 (?=XP) 时，也就是在 n 字母后面的缝隙，这个缝隙必须满足的条件是：后面的字符必须是 XP，如果是的话，匹配成功，否则匹配失败。由于(?=XP) 是匹配缝隙的，因此并不会把 XP 给匹配输出，而只输出了 Win 因此，这个表达式的语义可以看作是：找到后面为“XP”字符所有的 Win。&lt;/p&gt;
+
+&lt;p&gt;假如，我们把表达式写成 Win(?=XP)(?=NT) 这样的话，那么这个语义是：找出后面为“XP”并且为“NT”字符所有的 Win 可以想象，这是个永远无法满足的匹配。(?=XP)(?=NT) 这个表示当前的缝隙必须同时满足的条件。&lt;/p&gt;
+
+&lt;p&gt;把这个表达式再改一下，改成 Win(?=.&lt;em&gt;XP)(?=.&lt;/em&gt;NT) 这个表示 Win 的后面必须出现XP 与 NT，位置和顺序都是无关的（这主要是 .* 的作用）。当然了这个表达式的效率是比较低的，得向后进行两次断言。&lt;/p&gt;
+
+&lt;p&gt;如果字符串是 WincbaXPabcNT 这个字符串，当匹配指示器走到 n 后面的缝隙时开始进行向后断言，首先对 .&lt;em&gt;XP 进行断言，很明显能将 cbaXP 匹配成功，这时第一个断言完成，再对 .&lt;/em&gt;NT 断言，可以看出 cbaXPabcNT 能与其匹配成功，这时第二个断言完成，因此表达式 Win(?=.&lt;em&gt;XP)(?=.&lt;/em&gt;NT) 能对 WincbaXPabcNT 进行匹配。&lt;/p&gt;
+
+&lt;p&gt;同理 WincbaNTabcXP 也是同样的效果。&lt;/p&gt;
+
+&lt;p&gt;如果能理解上面的这些，对于 (?=.&lt;em&gt;[a-z])(?=.&lt;/em&gt;[A-Z])(?=.*//d) 这个的理应该不会很难吧，这个只不过是必须同时满足三个条件。&lt;/p&gt;
+
+&lt;p&gt;这个表达式在开始部分就进行断言，即索引为 0 的地方，也就是第一个字符的前面的缝隙，这个缝隙后面的字符必须满足 .&lt;em&gt;[a-z]  .&lt;/em&gt;[A-Z]  .*//d  三个条件，也就是说必后面必须出现至少一个小写字母、至少一个大写母、至少一个数字。&lt;/p&gt;
+
+&lt;p&gt;^ 和 - 在 [  ] 结构的表达式中是有一定意义的。&lt;/p&gt;
+
+&lt;p&gt;[^abc] 表示除 abc 以外所有的字符，注意，这是放在最前面表示这个意思，如果改成 [a^bc] 这个仅表示 a ^ b c 四个字符。如果需要匹配 ^ 这个字符的话，千万不要把它放在第一个，如果一定要放在第一个的话，得使用转义符。&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;在 [  ] 表示字符的范围，比如 [a-z] 表示 a 与 z 之间的 26 个字母，[a-zA-Z] 这个表示 a-z 和 A-Z 的 52 个字母。使用范围得注意了，如果写成[z-a] 的话，在 Pattern.compile 编译表达式时会对范围进行检查，这时会产生异常，因此在使用 - 范围时，后面的 Unicode 值必须大于等于前面的 Unicode值。&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;如果要匹配“-”的话，尽量不要把 - 这个放在字符之间，可以放在 [  ] 的两边。比如 [-a-z] 这就能匹配 26 个小写字母和“-”了。当然了，我们也可以写成[a-z-A-Z] 这个可以匹配 52 字母和“-”，但是这样很不直观，我们宁愿写成[a-zA-Z-] 或者 [-a-zA-Z] 这样。&lt;/p&gt;
+
+&lt;h3 id=&quot;section-4&quot;&gt;还有很多需要慢慢补充的，只有自己用到的时候才会真正理解某个表达式的意义。多用多想，其实没那么困难。&lt;/h3&gt;
+
+</content>
+<category term="TextView" />
+<summary>1. 什么是正则表达式</summary>
+</entry>
+<entry>
+<title>关闭系统键盘的联想输入</title>
+<link href="https://LSnail.github.io/Disable-Keyboard-Predictive-Text/" rel="alternate" type="text/html" title="关闭系统键盘的联想输入" />
+<published>2015-08-02T14:52:15+08:00</published>
+<updated>2015-08-02T14:52:15+08:00</updated>
+<id>https://LSnail.github.io/Disable Keyboard Predictive Text</id>
+<content type="html" xml:base="https://LSnail.github.io/Disable-Keyboard-Predictive-Text/">&lt;h3 id=&quot;disable-keyboard-predictive-text&quot;&gt;Disable Keyboard Predictive Text&lt;/h3&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;textField.autocorrectionType = Yes;
+textField.autocorrectionType = No;
+
+myTextView.autocorrectionType = UITextAutocorrectionTypeNo;
+myTextView.autocorrectionType = UITextAutocorrectionTypeYes;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;放在 becomeFirstResponder前面或者直接在-viewDidLoad里面设置即可&lt;/p&gt;
+</content>
+<category term="iOS基础" />
+<summary>Disable Keyboard Predictive Text</summary>
+</entry>
+<entry>
+<title>UIViewController的生命周期及iOS程序执行顺序</title>
+<link href="https://LSnail.github.io/ViewController-live-time/" rel="alternate" type="text/html" title="UIViewController的生命周期及iOS程序执行顺序" />
+<published>2015-06-04T01:16:02+08:00</published>
+<updated>2015-06-04T01:16:02+08:00</updated>
+<id>https://LSnail.github.io/ViewController-live-time</id>
+<content type="html" xml:base="https://LSnail.github.io/ViewController-live-time/">&lt;h3 id=&quot;section&quot;&gt;当一个视图控制器被创建，并在屏幕上显示的时候。 代码的执行顺序：&lt;/h3&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;alloc&lt;/code&gt; 创建对象，分配空间&lt;/li&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;init&lt;/code&gt; (initWithNibName) 初始化对象，初始化数据&lt;/li&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;loadView&lt;/code&gt; 从nib载入视图 ，通常这一步不需要去干涉。除非你没有使用xib文件创建视图&lt;/li&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;viewDidLoad&lt;/code&gt; 载入完成，可以进行自定义数据以及动态创建其他控件&lt;/li&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;viewWillAppear&lt;/code&gt; 视图将出现在屏幕之前，马上这个视图就会被展现在屏幕上了&lt;/li&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;viewDidAppear&lt;/code&gt; 视图已在屏幕上渲染完成
+当一个视图被移除屏幕并且销毁的时候的执行顺序，这个顺序差不多和上面的相反&lt;/li&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;viewWillDisappear&lt;/code&gt; 视图将被从屏幕上移除之前执行&lt;/li&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;viewDidDisappear&lt;/code&gt; 视图已经被从屏幕上移除，用户看不到这个视图了&lt;/li&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;dealloc&lt;/code&gt; 视图被销毁，此处需要对你在init和viewDidLoad中创建的对象进行释放&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h3 id=&quot;viewdidunload&quot;&gt;关于&lt;code class=&quot;highlighter-rouge&quot;&gt;viewDidUnload&lt;/code&gt;&lt;/h3&gt;
+
+&lt;p&gt;在发生内存警告的时候如果本视图不是当前屏幕上正在显示的视图的话， viewDidUnload将会被执行，本视图的所有子视图将被销毁，以释放内存,此时开发者需要手动对viewLoad、viewDidLoad中创建的对象释放内存。 因为当这个视图再次显示在屏幕上的时候，viewLoad、viewDidLoad 再次被调用，以便再次构造视图。&lt;/p&gt;
+
+&lt;p&gt;当我们创建一个UIViewController类的对象时，通常系统会生成几个默认的方法，这些方法大多与视图的调用有关，但是在视图调用时，这些方法的调用顺序如何，需要整理下。&lt;/p&gt;
+
+&lt;p&gt;通常上述方法包括如下几种，这些方法都是UIViewController类的方法:&lt;/p&gt;
+
+&lt;p&gt;{% highlight ruby %}
+- (void)viewDidLoad;
+- (void)viewDidUnload;
+- (void)viewWillAppear:(BOOL)animated;
+- (void)viewDidAppear:(BOOL)animated;
+- (void)viewWillDisappear:(BOOL)animated;
+- (void)viewDidDisappear:(BOOL)animated;
+{% endhighlight %}&lt;/p&gt;
+
+&lt;h3 id=&quot;app&quot;&gt;下面介绍下APP在运行时的调用顺序。&lt;/h3&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;- (void)viewDidLoad；&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;一个APP在载入时会先通过调用loadView方法或者载入IB中创建的初始界面的方法，将视图载入到内存中。然后会调用viewDidLoad方法来进行进一步的设置。通常，我们对于各种初始数据的载入，初始设定等很多内容，都会在这个方法中实现，所以这个方法是一个很常用，很重要的方法。&lt;/p&gt;
+
+&lt;p&gt;但是要注意，这个方法只会在APP刚开始加载的时候调用一次，以后都不会再调用它了，所以只能用来做初始设置。&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;- (void)viewDidUnload;&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;在内存足够的情况下，软件的视图通常会一直保存在内存中，但是如果内存不够，一些没有正在显示的viewcontroller就会收到内存不够的警告，然后就会释放自己拥有的视图，以达到释放内存的目的。但是系统只会释放内存，并不会释放对象的所有权，所以通常我们需要在这里将不需要在内存中保留的对象释放所有权，也就是将其指针置为nil。&lt;/p&gt;
+
+&lt;p&gt;这个方法通常并不会在视图变换的时候被调用，而只会在系统退出或者收到内存警告的时候才会被调用。但是由于我们需要保证在收到内存警告的时候能够对其作出反应，所以这个方法通常我们都需要去实现。&lt;/p&gt;
+
+&lt;p&gt;另外，即使在设备上按了Home键之后，系统也不一定会调用这个方法，因为IOS4之后，系统允许将APP在后台挂起，并将其继续滞留在内存中，因此，viewcontroller并不会调用这个方法来清除内存。&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;- (void)viewWillAppear:(BOOL)animated;&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;系统在载入所有数据后，将会在屏幕上显示视图，这时会先调用这个方法。通常我们会利用这个方法，对即将显示的视图做进一步的设置。例如，我们可以利用这个方法来设置设备不同方向时该如何显示。&lt;/p&gt;
+
+&lt;p&gt;另外一方面，当APP有多个视图时，在视图间切换时，并不会再次载入viewDidLoad方法，所以如果在调入视图时，需要对数据做更新，就只能在这个方法内实现了。所以这个方法也非常常用。
+*  ` - (void)viewDidAppear:(BOOL)animated；`&lt;/p&gt;
+
+&lt;p&gt;有时候，由于一些特殊的原因，我们不能在viewWillApper方法里，对视图进行更新。那么可以重写这个方法，在这里对正在显示的视图进行进一步的设置。
+*  ` - (void)viewWillDisappear:(BOOL)animated；`&lt;/p&gt;
+
+&lt;p&gt;在视图变换时，当前视图在即将被移除、或者被覆盖时，会调用这个方法进行一些善后的处理和设置。&lt;/p&gt;
+
+&lt;p&gt;由于在IOS4之后，系统允许将APP在后台挂起，所以在按了Home键之后，系统并不会调用这个方法，因为就这个APP本身而言，APP显示的view，仍是挂起时候的view，所以并不会调用这个方法。&lt;/p&gt;
+
+&lt;ul&gt;
+  &lt;li&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;- (void)viewDidDisappear:(BOOL)animated；&lt;/code&gt;&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;我们可以重写这个方法，对已经消失，或者被覆盖，或者已经隐藏了的视图做一些其他操作。
+```&lt;/p&gt;
+
+&lt;p&gt;上述方法的流程图可以简单用如下表示：&lt;/p&gt;
+
+&lt;p class=&quot;notice&quot;&gt;运行APP —&amp;gt; 载入视图 —&amp;gt; 调用viewDidLoad方法 —&amp;gt; 调用viewWillAppear方法 —&amp;gt; 调用viewDidAppear方法 —&amp;gt;   正常运行 -&amp;gt; 载入新的View&lt;/p&gt;
+
+&lt;p class=&quot;notice&quot;&gt;APP需要调用另一个view -&amp;gt; 调用viewWillDisappear -&amp;gt; 调用viewDidDisappear -&amp;gt; 收到内存警告 -&amp;gt; 调用viewDidUnload -&amp;gt; 释放对象所有权&lt;/p&gt;
+
+&lt;p&gt;&lt;a href=&quot;http://www.yifeiyang.net/iphone-developer-advanced-3-iphone-application-startup-process/&quot;&gt;链接：IOS程序启动执行顺序&lt;/a&gt;&lt;/p&gt;
+
+&lt;h3 id=&quot;ios--loadview--viewdidload-&quot;&gt;IOS 开发 &lt;code class=&quot;highlighter-rouge&quot;&gt;loadView&lt;/code&gt; 和 &lt;code class=&quot;highlighter-rouge&quot;&gt;viewDidLoad&lt;/code&gt; 的区别&lt;/h3&gt;
+&lt;p&gt;iPhone开发必不可少的要用到这两个方法。 他们都可以用来在视图载入的时候，初始化一些内容。 但是他们有什么区别呢？&lt;/p&gt;
+
+&lt;p&gt;viewDidLoad 此方法只有当view从nib文件初始化的时候才被调用。
+loadView 此方法在控制器的view为nil的时候被调用。 此方法用于以编程的方式创建view的时候用到。 如：&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;o&quot;&gt;-&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;(&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;void&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;loadView&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;{&lt;/span&gt;
+    &lt;span class=&quot;no&quot;&gt;UIView&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;view&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;p&quot;&gt;[[&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;UIView&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;alloc&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;initWithFrame&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;:[&lt;/span&gt;&lt;span class=&quot;no&quot;&gt;UIScreen&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;mainScreen&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;].&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;applicationFrame&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;];&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;view&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;setBackgroundColor&lt;/span&gt;&lt;span class=&quot;ss&quot;&gt;:_color&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;];&lt;/span&gt;
+    &lt;span class=&quot;nb&quot;&gt;self&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;nf&quot;&gt;view&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;view&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;view&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;release&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;];&lt;/span&gt;
+&lt;span class=&quot;p&quot;&gt;}&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;
+&lt;/div&gt;
+
+&lt;p&gt;你在控制器中实现了loadView方法，那么你可能会在应用运行的某个时候被内存管理控制调用。 如果设备内存不足的时候， view 控制器会收到didReceiveMemoryWarning的消息。 默认的实现是检查当前控制器的view是否在使用。如果它的view不在当前正在使用的view hierarchy里面，且你的控制器实现了loadView方法，那么这个view将被release, loadView方法将被再次调用来创建一个新的view。&lt;/p&gt;
+
+&lt;hr /&gt;
+
+&lt;p&gt;PS:&lt;/p&gt;
+
+&lt;p&gt;不要在&lt;code class=&quot;highlighter-rouge&quot;&gt;-lodadView&lt;/code&gt;里面读取self.view。而是只设置它，不要去拿到它的对象。因为self.view的对象在当前如果没有加载完毕，就会调用-loadView方法，如果在里面读取的话会出现死循环。
+按照苹果官方&lt;u&gt;pre-Interface-Builder&lt;/u&gt;里面的示例代码，通常我们在&lt;code class=&quot;highlighter-rouge&quot;&gt;-loadView&lt;/code&gt;里面的做法应该是这样的：&lt;/p&gt;
+
+&lt;p&gt;{% highlight ruby %}
+UIView *view = [[UIView alloc] init…];
+…
+[view addSubview: whatever1];
+[view addSubview: whatever2];
+…
+self.view = view;
+[view release];
+{% endhighlight %}&lt;/p&gt;
+</content>
+<category term="iOS基础" />
+<summary>简单基础却不能错过的知识点哦~</summary>
+</entry>
+</feed>

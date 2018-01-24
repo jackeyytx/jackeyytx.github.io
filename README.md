@@ -1,2 +1,0 @@
-# jackeyytx.github.io
-BLOG
